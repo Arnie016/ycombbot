@@ -48,7 +48,7 @@ GitHub repo:
 - `https://github.com/Arnie016/ycombbot`
 
 Latest pushed commit when this handoff was written:
-- `70ef7ce`
+- `4ed944c`
 
 Can your friend use it right now:
 - yes, by cloning the GitHub repo and either:
@@ -57,6 +57,11 @@ Can your friend use it right now:
 
 Can they access a public deployed URL right now:
 - no, not until one of you completes the Render deploy
+
+Can you manual sync Render again after a new push:
+- yes
+- if the Blueprint is set to manual sync, every new GitHub push requires another `Manual sync`
+- if Auto Sync is enabled, Render will usually apply Blueprint changes automatically on push to the tracked branch
 
 ## What The Backend Does
 
@@ -95,6 +100,187 @@ The backend, not the bot, owns:
 - evidence ranking
 - summarization
 - output shaping
+
+## How Render Works For This Repo
+
+Render conceptually has three layers here:
+
+1. GitHub repository
+   - the source of truth for code and `render.yaml`
+2. Blueprint
+   - the infrastructure-as-code object in Render that reads `render.yaml`
+3. Web service
+   - the actual running app created and managed by the Blueprint
+
+For this repo, that means:
+
+- GitHub repo:
+  - `Arnie016/ycombbot`
+- Blueprint:
+  - points at the repo and branch
+  - reads `render.yaml`
+- Web service:
+  - `linkedin-profile-brief-api`
+
+How a change flows:
+
+1. Push a new commit to GitHub.
+2. Render sees the new commit on the tracked branch.
+3. If Auto Sync is enabled:
+   - Render updates the Blueprint-managed resources automatically.
+4. If Auto Sync is disabled:
+   - you must click `Manual sync`.
+5. Render re-applies the `render.yaml` config to the managed service.
+6. If code or config changed, the service rebuilds and redeploys.
+
+Important Render Blueprint behavior:
+
+- the Blueprint is the config source of truth
+- if you change a Blueprint-managed setting in the dashboard and it conflicts with `render.yaml`, the next sync can overwrite it
+- syncing a Blueprint updates existing resources, it does not create a fresh unrelated copy if the names match
+- if you delete a Blueprint-managed service but keep it in `render.yaml`, Render can recreate it on the next sync
+- Blueprint sync does not automatically delete existing resources just because they were removed from YAML; deletion is intentionally guarded
+
+What `Manual sync` means for you:
+
+- it tells Render to read the latest tracked commit from GitHub again
+- it re-applyies the Blueprint to managed resources
+- it is the right thing to do after I push a newer commit and your Blueprint page still shows an older commit
+
+What to check on the Blueprint page:
+
+- repo: `Arnie016 / ycombbot`
+- branch: `main`
+- latest synced commit
+- whether Sync mode is manual or automatic
+
+If the Blueprint still shows an older commit:
+
+1. confirm the new commit exists on GitHub
+2. refresh the Blueprint page
+3. click `Manual sync`
+4. verify the sync target commit changed
+
+## How The Render Deploy Works Technically
+
+This repo deploys as a Node web service.
+
+Render reads these fields from `render.yaml`:
+
+- `type: web`
+- `runtime: node`
+- `plan: starter`
+- `region: singapore`
+- `healthCheckPath: /health`
+- build command
+- start command
+- env vars
+
+For this repo:
+
+- build command:
+  - `npm install && npx playwright install chromium && npm run build`
+- start command:
+  - `npm run start`
+
+What each one does:
+
+- `npm install`
+  - installs Node dependencies from `package.json`
+- `npx playwright install chromium`
+  - installs the Chromium browser required by Playwright scraping
+- `npm run build`
+  - compiles TypeScript from `src/` into `dist/`
+- `npm run start`
+  - starts the compiled Express server from `dist/index.js`
+
+Why health checks matter:
+
+- Render sends `GET /health` to determine whether the service is ready
+- this is used during deploys and while the service is running
+- if health checks keep failing, Render can stop routing traffic to the instance and eventually restart it
+
+Why this matters for this service:
+
+- the server must boot successfully
+- Express must listen on the Render-provided port
+- `/health` must return success quickly
+
+## Required Render Environment Variables
+
+Render env vars for this service:
+
+- `EXA_API_KEY`
+  - powers public-web discovery
+- `OPENAI_API_KEY`
+  - powers synthesis / structured shaping
+
+Also set by the Blueprint:
+
+- `NODE_VERSION=22`
+- `PORT=10000`
+- `PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.render-playwright`
+
+What happens if they are missing:
+
+- missing `EXA_API_KEY`
+  - no discovery enrichment
+  - output becomes thinner
+- missing `OPENAI_API_KEY`
+  - no structured synthesis
+  - output quality drops significantly
+- missing both
+  - basic LinkedIn scraping still works
+  - public-footprint reconstruction becomes much worse
+
+## Exact Deploy And Sync Procedure
+
+Initial deploy:
+
+1. Open Render dashboard.
+2. Click `New`.
+3. Click `Blueprint`.
+4. Choose GitHub repo `Arnie016/ycombbot`.
+5. Render reads repo-root `render.yaml`.
+6. Enter:
+   - `EXA_API_KEY`
+   - `OPENAI_API_KEY`
+7. Apply the Blueprint.
+8. Wait for `linkedin-profile-brief-api` to build and deploy.
+9. Test `/health`.
+10. Test `/profile`.
+
+After later code changes:
+
+1. Confirm the new commit is pushed to GitHub.
+2. Open the Blueprint page.
+3. If Auto Sync is off, click `Manual sync`.
+4. Confirm the Blueprint is syncing the latest commit SHA.
+5. Wait for the web service to redeploy.
+6. Test again.
+
+## Where To Debug Render If It Fails
+
+Look in this order:
+
+1. Blueprint sync status
+   - did it sync the correct commit?
+2. Service `Events`
+   - shows build and deploy events
+3. Build logs
+   - install / Playwright / TypeScript failures
+4. Runtime logs
+   - server boot failures
+5. `/health`
+   - if health fails, the deploy can be canceled or the service restarted
+
+Most likely failure classes for this repo:
+
+- environment variables not set
+- Playwright browser install problem
+- TypeScript build failure
+- service starts but does not pass `/health`
+- old commit still deployed because the Blueprint was not manually synced
 
 ## What The Bot Should Do
 
@@ -458,24 +644,38 @@ Source files:
   - request validation
   - routes
   - mode handling
+  - single vs batch response shape
 - `src/types.ts`
   - shared types
+  - bot response contract
+  - confidence fields
 - `src/utils/linkedin.ts`
   - LinkedIn URL parsing/classification
+  - object kind detection
+  - stable ID extraction
 - `src/utils/identity.ts`
   - slug/name heuristics
+  - anti-hallucination guardrails for vanity slugs
 - `src/scraper/fetchLinkedInPage.ts`
   - Playwright fetch
+  - authwall detection
 - `src/scraper/extractLinkedInData.ts`
   - page extraction
+  - visible LinkedIn fields
 - `src/providers/exa.ts`
   - discovery provider
+  - public-web result collection
+  - GitHub / Devpost expansion
 - `src/providers/openai.ts`
   - structured synthesis
+  - converts evidence into cleaner profile structure
 - `src/pipeline/enrichProfile.ts`
   - enrichment orchestration
 - `src/presentation/buildPresentation.ts`
   - bot JSON and text shaping
+  - project ranking
+  - link ranking
+  - confidence
 - `src/insights/deriveInsights.ts`
   - insight generation
 - `src/config.ts`
@@ -594,6 +794,24 @@ Exact Render steps:
    - `https://<service-name>.onrender.com/profile`
    - `https://<service-name>.onrender.com/profile/text`
 
+How to know you are on the latest code:
+
+- compare the deployed Blueprint commit to the latest GitHub commit
+- if GitHub is ahead, sync again
+- after sync, the service should redeploy from the newer commit
+
+If you need to redeploy without code changes:
+
+- restart the service from Render
+- or redeploy the currently tracked commit from the service page
+
+If you need to update config:
+
+- change `render.yaml`
+- commit
+- push
+- manual sync the Blueprint again
+
 Expected live endpoints after deploy:
 - `https://<service-name>.onrender.com/health`
 - `https://<service-name>.onrender.com/profile`
@@ -623,6 +841,31 @@ Recommended default request from the bot:
   "includeWeakSignals": false
 }
 ```
+
+Recommended bot-side logic:
+
+1. user sends message
+2. extract first LinkedIn URL
+3. call `/profile`
+4. if `confidence.identity === "low"` or `status === "authwall"` with sparse fields:
+   - return a lighter card
+5. else:
+   - return the full intro-ready card
+6. always include links at the end
+
+Recommended caching:
+
+- key by `canonicalSlug` + `mode`
+- short TTL for public profiles
+- longer TTL for clearly authwalled sparse profiles
+
+Recommended future improvements your friend can build on top:
+
+- persistent cache/database of prior results
+- knowledge base of confirmed identities and projects
+- human feedback loop for correcting wrong rankings
+- per-field provenance display
+- async enrichment jobs for deeper profiles
 
 Recommended end-user output:
 
@@ -659,6 +902,23 @@ So yes, links should stay in the final message.
 - some profiles will still be thin
 - project ranking is better than before, but not perfect for every profile
 - live deployment still needs to be completed manually in Render
+
+## Official Render References
+
+These are the key docs this deployment flow is based on:
+
+- Render Blueprints:
+  - [Render Blueprints](https://render.com/docs/infrastructure-as-code)
+- Blueprint YAML fields:
+  - [Blueprint YAML Reference](https://render.com/docs/blueprint-spec)
+- GitHub connection:
+  - [Connect GitHub](https://render.com/docs/github)
+- Web services:
+  - [Web Services](https://render.com/docs/web-services)
+- Health checks:
+  - [Health Checks](https://render.com/docs/health-checks)
+- Environment variables:
+  - [Environment Variables](https://render.com/docs/environment-variables)
 
 ## Short Answer
 
