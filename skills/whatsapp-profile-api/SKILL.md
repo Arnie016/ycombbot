@@ -43,27 +43,28 @@ For thin authwalled profiles, the intended fallback is:
 ```text
 Unknown profile
 
-Identity details are not confidently inferable from public sources.
+Low-public-footprint builder or operator; public details are limited, so the best next step is to ask directly what they are building lately.
 
 Links:
 - LinkedIn
 - GitHub or Devpost if a strong public build link exists
 
 Intro angle:
-Lead with a simple question about what they are building lately.
+Lead with a simple founder/operator question: what are you building lately?
 ```
 
 ## Current Status
 
 Deployment status:
-- not deployed on Render from this workspace yet
+- deployed on Render by the user-managed Blueprint flow
 - current working local base URL: `http://localhost:3001`
+- current public Render base URL: `https://linkedin-profile-brief-api.onrender.com`
 
 GitHub repo:
 - `https://github.com/Arnie016/ycombbot`
 
 Latest pushed commit when this handoff was written:
-- `4ed944c`
+- `6b184dc`
 
 Can your friend use it right now:
 - yes, by cloning the GitHub repo and either:
@@ -71,7 +72,7 @@ Can your friend use it right now:
   - deploying to Render from the included blueprint
 
 Can they access a public deployed URL right now:
-- no, not until one of you completes the Render deploy
+- yes, via the current Render service URL above
 
 Can you manual sync Render again after a new push:
 - yes
@@ -115,6 +116,42 @@ The backend, not the bot, owns:
 - evidence ranking
 - summarization
 - output shaping
+
+## Endpoint Summary
+
+Public base URL:
+- `https://linkedin-profile-brief-api.onrender.com`
+
+Local base URL:
+- `http://localhost:3001`
+
+Main bot endpoint:
+- `POST /profile`
+
+Other endpoints:
+- `GET /health`
+- `POST /profile/text`
+- `POST /profile/full`
+- `POST /inspect`
+- `POST /inspect/text`
+- `POST /inspect/full`
+
+Use this in production:
+- `POST https://linkedin-profile-brief-api.onrender.com/profile`
+
+Use this default request body:
+
+```json
+{
+  "url": "<linkedin-url>",
+  "mode": "public_web_enriched",
+  "strictIdentity": true,
+  "researchMode": "balanced",
+  "maxProjects": 3,
+  "maxLinks": 4,
+  "includeWeakSignals": false
+}
+```
 
 ## How Render Works For This Repo
 
