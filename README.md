@@ -1,0 +1,165 @@
+# LinkedIn Profile Brief API
+
+Small HTTP service for your WhatsApp bot backend.
+
+Input:
+- a public LinkedIn profile URL or company URL
+- optional `productName`, `productSummary`, and `productKeywords`
+
+Output:
+- name
+- work / study
+- role / organization
+- what they do
+- awards / competitions found publicly
+- top 3 projects
+- top skills
+- strongest signals
+- best intro angle
+- best public links
+
+## Why this shape
+
+LinkedIn's official member APIs are for authenticated members with consent, not arbitrary profile lookup from a random URL. This project is therefore built as a public-page extractor plus your own insight logic.
+
+It does **not**:
+- log into LinkedIn
+- bypass anti-bot gates
+- solve CAPTCHAs
+- scrape private profile data
+
+That keeps the architecture simpler and reduces failure modes, even though public LinkedIn pages can still be brittle.
+
+## API
+
+### `GET /health`
+
+Returns a basic health payload.
+
+### Stable bot endpoints
+
+- `POST /profile`
+  Compact JSON for the WhatsApp bot.
+- `POST /profile/text`
+  Terminal-friendly text card.
+- `POST /profile/full`
+  Debug payload with raw discovery and structured evidence.
+
+### `POST /profile`
+
+Request:
+
+```json
+{
+  "url": "https://www.linkedin.com/in/example-person/",
+  "productName": "WarmIntro",
+  "productSummary": "WhatsApp-first networking assistant that turns public profiles into intro-ready briefs.",
+  "productKeywords": ["networking", "sales", "introductions", "whatsapp"]
+}
+```
+
+Response shape:
+
+```json
+{
+  "name": "Example Person",
+  "slug": "example-person-123",
+  "workOrStudy": "Student at NUS",
+  "currentRole": "Student",
+  "organization": "NUS",
+  "status": "authwall",
+  "whatTheyDo": "Working on legal AI and hackathon projects.",
+  "awards": [
+    {
+      "event": "OpenAI Open Model Hackathon",
+      "result": "Winner Most Useful Fine-Tune",
+      "sourceUrl": "https://devpost.com/software/..."
+    }
+  ],
+  "impressiveProjects": [
+    {
+      "name": "PACMAN.ai",
+      "whyImpressive": "Public hackathon project page with concrete build details.",
+      "skills": ["AI", "RAG"],
+      "sourceUrl": "https://devpost.com/software/pacman-ai"
+    }
+  ],
+  "topSkills": ["AI", "RAG", "Open source"],
+  "strongestSignals": ["PACMAN.ai", "Dental Assessment GPT"],
+  "bestIntroAngle": "Lead with PACMAN.ai and ask what they are building next.",
+  "links": [
+    {
+      "label": "Devpost",
+      "url": "https://devpost.com/itsarnavsalkade"
+    }
+  ],
+  "nextStep": "Ask for a resume or profile export for deeper history."
+}
+```
+
+### `POST /profile/text`
+
+Returns a terminal/share-card version:
+
+```text
+Example Person
+Work / Study: Student at NUS
+Role: Student @ NUS
+
+What they do: Working on legal AI and hackathon projects.
+
+Awards / Competitions:
+- OpenAI Open Model Hackathon: Winner Most Useful Fine-Tune
+
+Top projects:
+- PACMAN.ai: Public hackathon project page with concrete build details.
+```
+
+## Local run
+
+```bash
+npm install
+npx playwright install chromium
+npm run dev
+```
+
+Then call it:
+
+```bash
+curl -X POST http://localhost:3000/profile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://www.linkedin.com/company/openai/",
+    "productName": "WarmIntro",
+    "productSummary": "WhatsApp-first networking assistant",
+    "productKeywords": ["ai", "messaging", "productivity"]
+  }'
+```
+
+Quick script:
+
+```bash
+chmod +x scripts/profile_card.sh
+scripts/profile_card.sh "https://www.linkedin.com/in/example-person/"
+```
+
+## Basic WhatsApp bot workflow
+
+1. User sends a LinkedIn URL to your bot.
+2. Bot calls `POST /profile`.
+3. Bot formats the response into a short message:
+   `Name`
+   `Work / Study`
+   `Awards / Competitions`
+   `Top projects`
+   `Top skills`
+4. Bot returns the shareable reply or a button/QR/share-link flow.
+
+## Best way to share this with friends
+
+- Host this as one small backend service.
+- Keep the WhatsApp bot as a separate thin client that only sends URLs and renders the reply.
+- Add per-user rate limits and logs on the bot side, not inside the scraper first.
+- Cache results by canonical LinkedIn URL for a few hours so repeated links are cheap.
+
+That gives you one source of truth for extraction and lets multiple friends use the same WhatsApp bot without each running a browser locally.

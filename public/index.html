@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Conclave | Live Networking For Founder Events</title>
+    <meta
+      name="description"
+      content="Conclave is the premium live networking layer for founder events: instant profile sharing, mutual connections, and a live leaderboard that rewards real introductions."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="#top" aria-label="Conclave home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-word">Conclave</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#product">Product</a>
+          <a href="#leaderboard">Leaderboard</a>
+          <a href="#event-flow">Event Flow</a>
+          <a href="#contact">Book Event</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero section">
+          <div class="hero-copy" data-reveal="up">
+            <p class="eyebrow">Live founder networking, re-scored in real time</p>
+            <h1>A founder event that counts the people you actually meet.</h1>
+            <p class="hero-summary">
+              Attendees create one profile, share it through one elegant scan, and
+              watch every mutual introduction lift them on a live leaderboard.
+              Competitive enough to be addictive. Calm enough to feel institutional.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#contact">Request Event Demo</a>
+              <a class="button button-secondary" href="#leaderboard">See The Live System</a>
+            </div>
+            <dl class="hero-metrics">
+              <div>
+                <dt>Verified connections</dt>
+                <dd data-count="1840">0</dd>
+              </div>
+              <div>
+                <dt>Average exchange</dt>
+                <dd data-count="12">0</dd>
+                <span class="metric-unit">sec</span>
+              </div>
+              <div>
+                <dt>Active attendees</dt>
+                <dd data-count="420">0</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="hero-stage" aria-hidden="true">
+            <div class="constellation-panel" data-reveal="fade">
+              <div class="constellation-grid"></div>
+              <svg
+                class="constellation"
+                viewBox="0 0 640 560"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g class="constellation-lines">
+                  <path d="M118 186L204 126L288 182L362 104L480 152L521 260L434 334L316 386L212 328L140 250Z" />
+                  <path d="M204 126L212 328L316 386L362 104L434 334L521 260L288 182L140 250" />
+                  <path d="M316 386L300 472L428 456L521 260L480 152L398 232L316 386Z" />
+                  <path d="M118 186L288 182L398 232L434 334L212 328L300 472" />
+                  <path d="M362 104L398 232L480 152L428 456L300 472L204 126" />
+                </g>
+                <g class="constellation-nodes">
+                  <circle cx="118" cy="186" r="8" />
+                  <circle cx="140" cy="250" r="8" />
+                  <circle cx="204" cy="126" r="8" />
+                  <circle cx="212" cy="328" r="8" />
+                  <circle cx="288" cy="182" r="8" />
+                  <circle cx="300" cy="472" r="8" />
+                  <circle cx="316" cy="386" r="8" />
+                  <circle cx="362" cy="104" r="8" />
+                  <circle cx="398" cy="232" r="8" />
+                  <circle cx="428" cy="456" r="8" />
+                  <circle cx="434" cy="334" r="8" />
+                  <circle cx="480" cy="152" r="8" />
+                  <circle cx="521" cy="260" r="8" />
+                </g>
+              </svg>
+
+              <section class="floating-sheet profile-sheet">
+                <div class="sheet-kicker">Attendee profile</div>
+                <div class="profile-topline">
+                  <div class="avatar">AK</div>
+                  <div>
+                    <h2>Arnav Kapoor</h2>
+                    <p>Founder, Quiet Orbit</p>
+                  </div>
+                </div>
+                <ul class="detail-list">
+                  <li>AI tooling for operators</li>
+                  <li>Looking for product-minded founders</li>
+                  <li>Raised 42 meaningful intros</li>
+                </ul>
+                <div class="qr-strip">
+                  <div class="qr-block"></div>
+                  <div class="share-copy">
+                    <span>One scan</span>
+                    <strong>Instant mutual connection</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="floating-sheet ranking-sheet">
+                <div class="sheet-kicker">Live leaderboard</div>
+                <ol class="ranking-list">
+                  <li>
+                    <span class="rank">01</span>
+                    <span class="name">Mina Patel</span>
+                    <span class="value">64</span>
+                  </li>
+                  <li class="is-active">
+                    <span class="rank">02</span>
+                    <span class="name">Arnav Kapoor</span>
+                    <span class="value">58</span>
+                  </li>
+                  <li>
+                    <span class="rank">03</span>
+                    <span class="name">Ethan Park</span>
+                    <span class="value">54</span>
+                  </li>
+                  <li>
+                    <span class="rank">04</span>
+                    <span class="name">Nadia Chen</span>
+                    <span class="value">48</span>
+                  </li>
+                </ol>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="section intro-band" data-reveal="fade">
+          <p>
+            Built for founder dinners, accelerator summits, investor salons, and
+            high-signal offsites where reputation matters as much as reach.
+          </p>
+        </section>
+
+        <section class="section product-grid" id="product">
+          <div class="section-heading" data-reveal="up">
+            <p class="eyebrow">One motion. Three outcomes.</p>
+            <h2>The product gives every introduction a visible consequence.</h2>
+          </div>
+
+          <div class="feature-columns">
+            <article class="feature" data-reveal="up">
+              <span class="feature-index">01</span>
+              <h3>Profile once.</h3>
+              <p>
+                Each guest arrives with a clean event card: who they are, what
+                they are building, and what kind of connection they want next.
+              </p>
+            </article>
+            <article class="feature" data-reveal="up">
+              <span class="feature-index">02</span>
+              <h3>Share instantly.</h3>
+              <p>
+                One QR or one link handles the exchange. No hunting for handles,
+                no awkward notes app ritual, no post-event cleanup.
+              </p>
+            </article>
+            <article class="feature" data-reveal="up">
+              <span class="feature-index">03</span>
+              <h3>Climb visibly.</h3>
+              <p>
+                Every mutual connection updates the live board, turning good
+                networking into a tasteful public game with real stakes.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section experience-layout" id="leaderboard">
+          <div class="experience-copy" data-reveal="up">
+            <p class="eyebrow">Live leaderboard</p>
+            <h2>Competitive energy without turning the room into a carnival.</h2>
+            <p>
+              Rankings reward actual mutual exchanges, not empty scans. The
+              board stays elegant, visible, and fast enough to spark momentum
+              between sessions.
+            </p>
+            <ul class="quiet-points">
+              <li>Mutual confirmation keeps the ranking credible.</li>
+              <li>Live refresh gives the room a pulse without noise.</li>
+              <li>Hosts can spotlight top connectors before the event closes.</li>
+            </ul>
+          </div>
+
+          <div class="leaderboard-stage" data-reveal="fade">
+            <div class="leaderboard-topline">
+              <span>Session ranking</span>
+              <span class="leaderboard-pill">Updated 12 seconds ago</span>
+            </div>
+            <div class="board-columns">
+              <div class="board-canvas">
+                <div class="board-graph">
+                  <span class="graph-point point-a"></span>
+                  <span class="graph-point point-b"></span>
+                  <span class="graph-point point-c"></span>
+                  <span class="graph-point point-d"></span>
+                  <span class="graph-line line-a"></span>
+                  <span class="graph-line line-b"></span>
+                  <span class="graph-line line-c"></span>
+                </div>
+              </div>
+              <div class="board-list">
+                <article class="board-row is-first">
+                  <div>
+                    <span class="board-rank">01</span>
+                    <h3>Mina Patel</h3>
+                    <p>Fintech founder, London</p>
+                  </div>
+                  <strong>64</strong>
+                </article>
+                <article class="board-row is-focus">
+                  <div>
+                    <span class="board-rank">02</span>
+                    <h3>Arnav Kapoor</h3>
+                    <p>Applied AI operator, Bengaluru</p>
+                  </div>
+                  <strong>58</strong>
+                </article>
+                <article class="board-row">
+                  <div>
+                    <span class="board-rank">03</span>
+                    <h3>Ethan Park</h3>
+                    <p>Developer tools, San Francisco</p>
+                  </div>
+                  <strong>54</strong>
+                </article>
+                <article class="board-row">
+                  <div>
+                    <span class="board-rank">04</span>
+                    <h3>Nadia Chen</h3>
+                    <p>Health systems, Singapore</p>
+                  </div>
+                  <strong>48</strong>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section narrative-layout" id="event-flow">
+          <div class="section-heading" data-reveal="up">
+            <p class="eyebrow">Event flow</p>
+            <h2>Calm on arrival. Fast in the room. Valuable after the close.</h2>
+          </div>
+
+          <div class="timeline">
+            <article class="timeline-step" data-reveal="up">
+              <span>01</span>
+              <div>
+                <h3>Before doors open</h3>
+                <p>
+                  Guests receive a private onboarding link and arrive with a
+                  finished profile already tuned to the room.
+                </p>
+              </div>
+            </article>
+            <article class="timeline-step" data-reveal="up">
+              <span>02</span>
+              <div>
+                <h3>During the event</h3>
+                <p>
+                  One scan creates the exchange, stores the contact, and updates
+                  the live ranking without breaking the conversation.
+                </p>
+              </div>
+            </article>
+            <article class="timeline-step" data-reveal="up">
+              <span>03</span>
+              <div>
+                <h3>After the closing remarks</h3>
+                <p>
+                  Hosts leave with a full network map, and attendees keep every
+                  verified introduction in one clean post-event record.
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section manifesto">
+          <div class="manifesto-quote" data-reveal="fade">
+            <p>
+              “The best networking products do not feel like products in the
+              room. They feel like better social choreography.”
+            </p>
+          </div>
+          <div class="manifesto-copy" data-reveal="up">
+            <p class="eyebrow">Why it feels premium</p>
+            <h2>More institution than app. More signal than spectacle.</h2>
+            <p>
+              Conclave is designed to belong inside serious founder environments:
+              restrained surfaces, thoughtful pacing, and just enough game
+              dynamics to pull people into motion.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer section" id="contact">
+        <div class="footer-copy" data-reveal="up">
+          <p class="eyebrow">Book an event</p>
+          <h2>Bring a live social layer to the room without lowering the tone.</h2>
+          <p>
+            Designed for accelerator batches, founder summits, private dinners,
+            and investor communities that want the networking itself to become
+            part of the experience.
+          </p>
+        </div>
+        <div class="footer-actions" data-reveal="up">
+          <a class="button button-primary" href="mailto:events@conclave.live">events@conclave.live</a>
+          <p class="footer-note">Private previews available for upcoming founder gatherings.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

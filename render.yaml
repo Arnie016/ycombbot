@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: linkedin-profile-brief-api
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npx playwright install chromium && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 10000
+      - key: EXA_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

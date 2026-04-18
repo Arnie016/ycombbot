@@ -1,0 +1,215 @@
+import express from "express";
+import path from "node:path";
+import { z } from "zod";
+import { getConfig } from "./config.js";
+import { enrichProfile } from "./pipeline/enrichProfile.js";
+import { deriveInsights } from "./insights/deriveInsights.js";
+import { buildBotProfile, buildBotText, buildPresentation, type ProfileBuildOptions } from "./presentation/buildPresentation.js";
+import { discoverPublicProfileEvidence } from "./providers/exa.js";
+import { fetchLinkedInPage } from "./scraper/fetchLinkedInPage.js";
+import { extractLinkedInData } from "./scraper/extractLinkedInData.js";
+import { ensureLinkedInUrl } from "./utils/linkedin.js";
+
+const app = express();
+const config = getConfig();
+
+const inspectSchema = z.object({
+  url: z.string().min(1).optional(),
+  urls: z.array(z.string().min(1)).max(10).optional(),
+  productName: z.string().trim().min(1).optional(),
+  productSummary: z.string().trim().min(1).optional(),
+  productKeywords: z.array(z.string().trim().min(1)).max(12).optional(),
+  researchMode: z.enum(["strict", "balanced", "exploratory"]).optional(),
+  maxProjects: z.number().int().min(1).max(5).optional(),
+  maxLinks: z.number().int().min(1).max(6).optional(),
+  includeWeakSignals: z.boolean().optional()
+}).superRefine((value, context) => {
+  if (!value.url && (!value.urls || value.urls.length === 0)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide either url or urls."
+    });
+  }
+});
+
+app.use(express.json());
+
+app.get("/", (_request, response) => {
+  response.sendFile(path.join(process.cwd(), "public", "index.html"));
+});
+
+app.get("/health", (_request, response) => {
+  response.json({
+    ok: true,
+    service: "linkedin-insight-scraper"
+  });
+});
+
+async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSchema>) {
+  const buildOptions: ProfileBuildOptions = {
+    researchMode: parsed.researchMode,
+    maxProjects: parsed.maxProjects,
+    maxLinks: parsed.maxLinks,
+    includeWeakSignals: parsed.includeWeakSignals
+  };
+  const url = ensureLinkedInUrl(urlInput);
+  const discoveryPromise = discoverPublicProfileEvidence({
+    type: "unknown",
+    url: url.toString(),
+    canonicalUrl: url.toString(),
+    access: {
+      finalUrl: url.toString(),
+      isAuthwall: false,
+      isBlocked: false,
+      expandedActions: []
+    },
+    sections: [],
+    sourceSignals: [],
+    notes: []
+  });
+  const fetchedPage = await fetchLinkedInPage({
+    url: url.toString(),
+    timeoutMs: config.scraperTimeoutMs,
+    headless: config.scraperHeadless
+  });
+  const entity = extractLinkedInData({
+    fetchedPage,
+    url
+  });
+  const payload = deriveInsights(entity, {
+    productName: parsed.productName,
+    productSummary: parsed.productSummary,
+    productKeywords: parsed.productKeywords
+  });
+  const enrichment = await enrichProfile(entity, discoveryPromise);
+  const fullPayload = {
+    ...payload,
+    discovery: enrichment.discovery,
+    structuredProfile: enrichment.structuredProfile,
+    presentation: buildPresentation(payload, enrichment.discovery, enrichment.structuredProfile, buildOptions)
+  };
+
+  return {
+    fullPayload,
+    botProfile: buildBotProfile(fullPayload, enrichment.discovery, enrichment.structuredProfile, buildOptions)
+  };
+}
+
+async function inspectInternal(requestBody: unknown) {
+  const parsed = inspectSchema.safeParse(requestBody);
+
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: "Invalid request body.",
+        details: parsed.error.flatten()
+      }
+    };
+  }
+
+  try {
+    const urls = parsed.data.urls?.length ? parsed.data.urls : [parsed.data.url!];
+    const results = await Promise.all(urls.map((urlInput) => inspectSingle(urlInput, parsed.data)));
+
+    return {
+      ok: true as const,
+      status: 200,
+      body: urls.length === 1
+        ? results[0]
+        : {
+            fullPayloads: results.map((result) => result.fullPayload),
+            botProfiles: results.map((result) => result.botProfile)
+          }
+    };
+  } catch (error) {
+    console.error(error);
+    const message = error instanceof Error ? error.message : "Unknown scraper error.";
+    return {
+      ok: false as const,
+      status: 500,
+      body: {
+        error: message
+      }
+    };
+  }
+}
+
+app.post("/inspect", async (request, response) => {
+  const result = await inspectInternal(request.body);
+
+  if (!result.ok) {
+    response.status(result.status).json(result.body);
+    return;
+  }
+
+  response.json("botProfile" in result.body ? result.body.botProfile : { profiles: result.body.botProfiles });
+});
+
+app.post("/profile", async (request, response) => {
+  const result = await inspectInternal(request.body);
+
+  if (!result.ok) {
+    response.status(result.status).json(result.body);
+    return;
+  }
+
+  response.json("botProfile" in result.body ? result.body.botProfile : { profiles: result.body.botProfiles });
+});
+
+app.post("/inspect/text", async (request, response) => {
+  const result = await inspectInternal(request.body);
+
+  if (!result.ok) {
+    response.status(result.status).type("text/plain").send(result.body.error);
+    return;
+  }
+
+  response.type("text/plain").send(
+    "botProfile" in result.body
+      ? buildBotText(result.body.botProfile)
+      : result.body.botProfiles.map((profile) => buildBotText(profile)).join("\n\n---\n\n")
+  );
+});
+
+app.post("/profile/text", async (request, response) => {
+  const result = await inspectInternal(request.body);
+
+  if (!result.ok) {
+    response.status(result.status).type("text/plain").send(result.body.error);
+    return;
+  }
+
+  response.type("text/plain").send(
+    "botProfile" in result.body
+      ? buildBotText(result.body.botProfile)
+      : result.body.botProfiles.map((profile) => buildBotText(profile)).join("\n\n---\n\n")
+  );
+});
+
+app.post("/inspect/full", async (request, response) => {
+  const result = await inspectInternal(request.body);
+
+  if (!result.ok) {
+    response.status(result.status).json(result.body);
+    return;
+  }
+
+  response.json("fullPayload" in result.body ? result.body.fullPayload : { profiles: result.body.fullPayloads });
+});
+
+app.post("/profile/full", async (request, response) => {
+  const result = await inspectInternal(request.body);
+
+  if (!result.ok) {
+    response.status(result.status).json(result.body);
+    return;
+  }
+
+  response.json("fullPayload" in result.body ? result.body.fullPayload : { profiles: result.body.fullPayloads });
+});
+
+app.listen(config.port, () => {
+  console.log(`linkedin-insight-scraper listening on http://localhost:${config.port}`);
+});
