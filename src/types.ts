@@ -112,6 +112,13 @@ export interface BotLink {
   url: string;
 }
 
+export interface BotConfidence {
+  identity: "high" | "medium" | "low";
+  currentRole: "high" | "medium" | "low";
+  projects: "high" | "medium" | "low";
+  summary: "high" | "medium" | "low";
+}
+
 export interface BotProfileResponse {
   kind?: LinkedInObjectKind;
   stableId?: string;
@@ -132,6 +139,7 @@ export interface BotProfileResponse {
   strongestSignals: string[];
   bestIntroAngle?: string;
   links: BotLink[];
+  confidence?: BotConfidence;
   nextStep: string;
 }
 

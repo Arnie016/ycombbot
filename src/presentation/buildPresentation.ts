@@ -1,5 +1,6 @@
 import type {
   BotAward,
+  BotConfidence,
   BotProject,
   BotProfileResponse,
   DiscoveryDocument,
@@ -38,6 +39,21 @@ function classifyLink(url: string): PresentationLink["kind"] {
   }
 
   return "portfolio";
+}
+
+function scoreLink(url: string): number {
+  if (/linkedin\.com\/in\//i.test(url)) return 120;
+  if (/github\.com\/[^/]+\/[^/]+$/i.test(url)) return 112;
+  if (/github\.com\/[^/]+$/i.test(url)) return 108;
+  if (/devpost\.com\/software\//i.test(url)) return 106;
+  if (/devpost\.com\/[^/?#]+$/i.test(url)) return 102;
+  if (/huggingface\.co\/[^/]+\/[^/]+$/i.test(url)) return 100;
+  if (/https?:\/\/(www\.)?[^/]+\.[^/]+\/?$/i.test(url) && !/medium\.com|gist\.github\.com|npmjs\.com/i.test(url)) return 92;
+  if (/medium\.com/i.test(url)) return 55;
+  if (/gist\.github\.com/i.test(url)) return 50;
+  if (/npmjs\.com/i.test(url)) return 45;
+  if (/linkedin\.com\/posts\//i.test(url)) return 40;
+  return 60;
 }
 
 function linkLabel(url: string, document?: DiscoveryDocument): string {
@@ -344,6 +360,20 @@ function profileVisibleProjects(entity: RawLinkedInEntity): BotProject[] {
   return projects.slice(0, 5);
 }
 
+function projectSourceUrls(
+  entity: RawLinkedInEntity,
+  structuredProfile?: StructuredProfile,
+  discovery?: DiscoveryResult
+): string[] {
+  return dedupe([
+    ...(structuredProfile?.projectHighlights ?? []).flatMap((project) => project.sourceUrls),
+    ...profileVisibleProjects(entity).flatMap((project) => project.sourceUrl ? [project.sourceUrl] : []),
+    ...(discovery?.documents ?? [])
+      .filter((document) => /github\.com\/[^/]+\/[^/]+$|devpost\.com\/software\/|huggingface\.co\/[^/]+\/[^/]+$/i.test(document.url))
+      .map((document) => document.url)
+  ].filter(Boolean) as string[]);
+}
+
 function topSkills(
   presentation: PresentationResult,
   entity: RawLinkedInEntity,
@@ -491,6 +521,7 @@ function bestLinks(
   const maxLinks = options?.maxLinks ?? 4;
   const priorityUrls = [
     entity.url,
+    ...projectSourceUrls(entity, structuredProfile, discovery),
     ...(structuredProfile?.externalProfiles ?? [])
   ];
 
@@ -524,7 +555,48 @@ function bestLinks(
     }
   }
 
-  return [...links.values()].slice(0, Math.max(1, maxLinks));
+  return [...links.values()]
+    .sort((left, right) => scoreLink(right.url) - scoreLink(left.url))
+    .slice(0, Math.max(1, maxLinks));
+}
+
+function buildConfidence(
+  entity: RawLinkedInEntity,
+  projects: BotProject[],
+  whatTheyDoValue: string | undefined
+): BotConfidence {
+  const identity = entity.name
+    ? "high"
+    : entity.access.isAuthwall
+      ? "low"
+      : entity.stableId
+        ? "medium"
+        : "low";
+
+  const currentRole = entity.headline
+    ? "high"
+    : entity.currentCompany || entity.about || entity.metaDescription
+      ? "medium"
+      : "low";
+
+  const projectsConfidence = projects.length >= 3
+    ? "high"
+    : projects.length >= 1
+      ? "medium"
+      : "low";
+
+  const summary = entity.about || entity.metaDescription
+    ? "high"
+    : whatTheyDoValue
+      ? "medium"
+      : "low";
+
+  return {
+    identity,
+    currentRole,
+    projects: projectsConfidence,
+    summary
+  };
 }
 
 export function buildPresentation(
@@ -585,6 +657,7 @@ export function buildBotProfile(
     .slice(0, maxProjects);
 
   const workOrStudy = inferWorkOrStudy(payload.entity, discovery);
+  const whatTheyDoValue = whatTheyDo(payload.entity, structuredProfile, discovery);
 
   return {
     kind: payload.entity.kind,
@@ -599,7 +672,7 @@ export function buildBotProfile(
     currentRole: structuredProfile?.currentIdentity?.currentRole,
     organization: structuredProfile?.currentIdentity?.organization,
     status: presentation.status,
-    whatTheyDo: whatTheyDo(payload.entity, structuredProfile, discovery),
+    whatTheyDo: whatTheyDoValue,
     awards: extractAwards(discovery),
     impressiveProjects: projects,
     topSkills: topSkills(presentation, payload.entity, structuredProfile, discovery),
@@ -612,6 +685,7 @@ export function buildBotProfile(
         label: link.label,
         url: link.url
       })),
+    confidence: buildConfidence(payload.entity, projects, whatTheyDoValue),
     nextStep: presentation.nextStep
   };
 }
@@ -656,14 +730,6 @@ export function buildBotText(profile: BotProfileResponse): string {
 
   if (profile.topSkills.length) {
     lines.push(`Top skills: ${profile.topSkills.join(", ")}`);
-    lines.push("");
-  }
-
-  if (profile.strongestSignals.length) {
-    lines.push("Strongest signals:");
-    for (const signal of profile.strongestSignals) {
-      lines.push(`- ${signal}`);
-    }
     lines.push("");
   }
 
