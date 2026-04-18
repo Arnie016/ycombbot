@@ -56,6 +56,21 @@ function scoreLink(url: string): number {
   return 60;
 }
 
+function isSameLinkedInProfile(entity: RawLinkedInEntity, url: string): boolean {
+  if (!/linkedin\.com\/in\//i.test(url)) {
+    return true;
+  }
+
+  const primarySlug = extractLinkedInSlug(entity.url)?.toLowerCase();
+  const candidateSlug = extractLinkedInSlug(url)?.toLowerCase();
+
+  if (!primarySlug || !candidateSlug) {
+    return false;
+  }
+
+  return primarySlug === candidateSlug;
+}
+
 function linkLabel(url: string, document?: DiscoveryDocument): string {
   if (document?.title) {
     return document.title;
@@ -526,6 +541,10 @@ function bestLinks(
   ];
 
   for (const url of priorityUrls) {
+    if (!isSameLinkedInProfile(entity, url)) {
+      continue;
+    }
+
     links.set(url, {
       label: linkLabel(url),
       url,
@@ -543,6 +562,10 @@ function bestLinks(
     }
 
     if (researchMode === "strict" && /linkedin\.com\/posts\//i.test(document.url)) {
+      continue;
+    }
+
+    if (!isSameLinkedInProfile(entity, document.url)) {
       continue;
     }
 
@@ -658,6 +681,25 @@ export function buildBotProfile(
 
   const workOrStudy = inferWorkOrStudy(payload.entity, discovery);
   const whatTheyDoValue = whatTheyDo(payload.entity, structuredProfile, discovery);
+  const confidence = buildConfidence(payload.entity, projects, whatTheyDoValue);
+  const sparseIdentity = payload.entity.access.isAuthwall && confidence.identity === "low";
+  const currentIdentity = sparseIdentity || structuredProfile?.currentIdentity?.confidence === "low"
+    ? undefined
+    : structuredProfile?.currentIdentity;
+  const links = sparseIdentity
+    ? [
+        {
+          label: "linkedin.com",
+          url: payload.entity.url
+        }
+      ]
+    : presentation.bestLinks
+        .filter((link) => link.kind !== "source")
+        .slice(0, maxLinks)
+        .map((link) => ({
+          label: link.label,
+          url: link.url
+        }));
 
   return {
     kind: payload.entity.kind,
@@ -668,24 +710,18 @@ export function buildBotProfile(
     slug: extractLinkedInSlug(payload.entity.url),
     headline: payload.entity.headline,
     location: payload.entity.location,
-    workOrStudy: structuredProfile?.currentIdentity?.workOrStudy || workOrStudy,
-    currentRole: structuredProfile?.currentIdentity?.currentRole,
-    organization: structuredProfile?.currentIdentity?.organization,
+    workOrStudy: sparseIdentity ? undefined : currentIdentity?.workOrStudy || workOrStudy,
+    currentRole: sparseIdentity ? undefined : currentIdentity?.currentRole,
+    organization: sparseIdentity ? undefined : currentIdentity?.organization,
     status: presentation.status,
-    whatTheyDo: whatTheyDoValue,
+    whatTheyDo: sparseIdentity ? undefined : whatTheyDoValue,
     awards: extractAwards(discovery),
     impressiveProjects: projects,
     topSkills: topSkills(presentation, payload.entity, structuredProfile, discovery),
     strongestSignals: presentation.topSignals,
     bestIntroAngle: structuredProfile?.bestIntroAngle,
-    links: presentation.bestLinks
-      .filter((link) => link.kind !== "source")
-      .slice(0, maxLinks)
-      .map((link) => ({
-        label: link.label,
-        url: link.url
-      })),
-    confidence: buildConfidence(payload.entity, projects, whatTheyDoValue),
+    links,
+    confidence,
     nextStep: presentation.nextStep
   };
 }
