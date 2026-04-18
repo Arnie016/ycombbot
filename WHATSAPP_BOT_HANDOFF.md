@@ -2,6 +2,12 @@
 
 This backend takes a LinkedIn URL and returns the best public, evidence-backed summary it can find about that person.
 
+GitHub repo:
+
+```text
+https://github.com/Arnie016/ycombbot
+```
+
 ## What The Bot Should Do
 
 1. User sends a LinkedIn URL in WhatsApp.

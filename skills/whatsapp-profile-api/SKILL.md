@@ -23,6 +23,9 @@ Production deployment:
 - use `render.yaml` at repo root to create the Render web service
 - this workspace is not currently a git repo, so deployment starts by putting this folder into GitHub
 
+GitHub repo:
+- `https://github.com/Arnie016/ycombbot`
+
 ## Core Rule
 
 The WhatsApp bot should make **one HTTP request** to this backend.
