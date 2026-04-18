@@ -38,6 +38,21 @@ Links:
 
 The backend is responsible for producing the data needed for that shape.
 
+For thin authwalled profiles, the intended fallback is:
+
+```text
+Unknown profile
+
+Identity details are not confidently inferable from public sources.
+
+Links:
+- LinkedIn
+- GitHub or Devpost if a strong public build link exists
+
+Intro angle:
+Lead with a simple question about what they are building lately.
+```
+
 ## Current Status
 
 Deployment status:
@@ -881,6 +896,13 @@ Top skills
 Intro angle
 Links
 ```
+
+Fallback behavior for thin profiles:
+- if identity confidence is low and LinkedIn is authwalled
+- do not invent role, org, or real name
+- still include the original LinkedIn link
+- also include strong build links like GitHub, Devpost, or Hugging Face when available
+- use a generic builder-oriented intro angle so the bot still returns something useful
 
 ## Product Logic
 

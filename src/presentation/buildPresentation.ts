@@ -622,6 +622,43 @@ function buildConfidence(
   };
 }
 
+function hasAISignals(projects: BotProject[], skills: string[]): boolean {
+  const haystack = [
+    ...skills,
+    ...projects.flatMap((project) => [project.name, project.whyImpressive, ...project.skills])
+  ].join(" ").toLowerCase();
+
+  return /\b(ai|llm|gpt|hugging face|openai|model)\b/.test(haystack);
+}
+
+function sparseWhatTheyDo(projects: BotProject[], skills: string[]): string | undefined {
+  if (projects.length >= 2) {
+    return `Public signals suggest they may be building around ${projects[0].name} and ${projects[1].name}, but identity details are not confidently inferable.`;
+  }
+
+  if (projects.length === 1) {
+    return `Public signals suggest they may be building around ${projects[0].name}, but identity details are not confidently inferable.`;
+  }
+
+  if (hasAISignals(projects, skills)) {
+    return "Public signals suggest they may be working on AI or developer tooling, but identity details are not confidently inferable.";
+  }
+
+  return "Identity details are not confidently inferable from public sources.";
+}
+
+function sparseIntroAngle(projects: BotProject[], skills: string[]): string {
+  if (hasAISignals(projects, skills)) {
+    return "Lead with a simple builder question: what AI are you building lately?";
+  }
+
+  if (projects.length > 0) {
+    return "Lead with a simple builder question about what they are building lately.";
+  }
+
+  return "Lead with a simple question about what they are building lately.";
+}
+
 export function buildPresentation(
   payload: ScrapeResponse,
   discovery?: DiscoveryResult,
@@ -683,16 +720,26 @@ export function buildBotProfile(
   const whatTheyDoValue = whatTheyDo(payload.entity, structuredProfile, discovery);
   const confidence = buildConfidence(payload.entity, projects, whatTheyDoValue);
   const sparseIdentity = payload.entity.access.isAuthwall && confidence.identity === "low";
+  const skillList = topSkills(presentation, payload.entity, structuredProfile, discovery);
   const currentIdentity = sparseIdentity || structuredProfile?.currentIdentity?.confidence === "low"
     ? undefined
     : structuredProfile?.currentIdentity;
   const links = sparseIdentity
-    ? [
+    ? dedupe([
         {
           label: "linkedin.com",
           url: payload.entity.url
-        }
-      ]
+        },
+        ...presentation.bestLinks
+          .filter((link) => link.kind === "project" || link.kind === "github" || /devpost\.com|github\.com|huggingface\.co/i.test(link.url))
+          .slice(0, Math.max(0, maxLinks - 1))
+          .map((link) => ({
+            label: link.label,
+            url: link.url
+          }))
+      ].map((link) => JSON.stringify(link)))
+        .map((link) => JSON.parse(link) as { label: string; url: string; })
+        .slice(0, maxLinks)
     : presentation.bestLinks
         .filter((link) => link.kind !== "source")
         .slice(0, maxLinks)
@@ -714,12 +761,12 @@ export function buildBotProfile(
     currentRole: sparseIdentity ? undefined : currentIdentity?.currentRole,
     organization: sparseIdentity ? undefined : currentIdentity?.organization,
     status: presentation.status,
-    whatTheyDo: sparseIdentity ? undefined : whatTheyDoValue,
+    whatTheyDo: sparseIdentity ? sparseWhatTheyDo(projects, skillList) : whatTheyDoValue,
     awards: extractAwards(discovery),
     impressiveProjects: projects,
-    topSkills: topSkills(presentation, payload.entity, structuredProfile, discovery),
+    topSkills: skillList,
     strongestSignals: presentation.topSignals,
-    bestIntroAngle: structuredProfile?.bestIntroAngle,
+    bestIntroAngle: sparseIdentity ? sparseIntroAngle(projects, skillList) : structuredProfile?.bestIntroAngle,
     links,
     confidence,
     nextStep: presentation.nextStep
