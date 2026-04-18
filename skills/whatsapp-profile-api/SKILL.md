@@ -63,8 +63,9 @@ Deployment status:
 GitHub repo:
 - `https://github.com/Arnie016/ycombbot`
 
-Latest pushed commit when this handoff was written:
-- `ea04569`
+Latest code reference:
+- use the current `main` branch on GitHub as source of truth
+- for the exact latest SHA, check the repo head on GitHub or run `git rev-parse --short HEAD`
 
 Can your friend use it right now:
 - yes, by cloning the GitHub repo and either:
@@ -346,7 +347,7 @@ Important Render Blueprint behavior:
 What `Manual sync` means for you:
 
 - it tells Render to read the latest tracked commit from GitHub again
-- it re-applyies the Blueprint to managed resources
+- it re-applies the Blueprint to managed resources
 - it is the right thing to do after I push a newer commit and your Blueprint page still shows an older commit
 
 What to check on the Blueprint page:
@@ -437,7 +438,11 @@ What happens if they are missing:
 
 ## Exact Deploy And Sync Procedure
 
-Initial deploy:
+Current live service:
+
+- `https://linkedin-profile-brief-api.onrender.com`
+
+If you are deploying from scratch:
 
 1. Open Render dashboard.
 2. Click `New`.
@@ -452,7 +457,7 @@ Initial deploy:
 9. Test `/health`.
 10. Test `/profile`.
 
-After later code changes:
+If the service already exists and new code was pushed:
 
 1. Confirm the new commit is pushed to GitHub.
 2. Open the Blueprint page.
@@ -950,7 +955,7 @@ curl -s -X POST http://localhost:3001/profile/full \
 
 ## Render Deployment
 
-This repo is deploy-ready, but not deployed yet.
+This repo is already deployed on Render, and it can also be redeployed or resynced from the same Blueprint.
 
 Repo to connect:
 - `https://github.com/Arnie016/ycombbot`
@@ -991,10 +996,10 @@ Exact Render steps:
 7. Apply the blueprint.
 8. Wait for deploy to finish.
 9. Open:
-   - `https://<service-name>.onrender.com/health`
+   - `https://linkedin-profile-brief-api.onrender.com/health`
 10. Then test:
-   - `https://<service-name>.onrender.com/profile`
-   - `https://<service-name>.onrender.com/profile/text`
+   - `https://linkedin-profile-brief-api.onrender.com/profile`
+   - `https://linkedin-profile-brief-api.onrender.com/profile/text`
 
 How to know you are on the latest code:
 
@@ -1014,11 +1019,11 @@ If you need to update config:
 - push
 - manual sync the Blueprint again
 
-Expected live endpoints after deploy:
-- `https://<service-name>.onrender.com/health`
-- `https://<service-name>.onrender.com/profile`
-- `https://<service-name>.onrender.com/profile/text`
-- `https://<service-name>.onrender.com/profile/full`
+Expected live endpoints:
+- `https://linkedin-profile-brief-api.onrender.com/health`
+- `https://linkedin-profile-brief-api.onrender.com/profile`
+- `https://linkedin-profile-brief-api.onrender.com/profile/text`
+- `https://linkedin-profile-brief-api.onrender.com/profile/full`
 
 ## What The Friend Should Build
 
@@ -1110,7 +1115,7 @@ So yes, links should stay in the final message.
 - public-web enrichment depends on the person having a real public footprint
 - some profiles will still be thin
 - project ranking is better than before, but not perfect for every profile
-- live deployment still needs to be completed manually in Render
+- Render is live, but every new GitHub push still needs a Blueprint sync when using manual sync mode
 
 ## Official Render References
 
@@ -1132,15 +1137,15 @@ These are the key docs this deployment flow is based on:
 ## Short Answer
 
 Is it deployed on Render:
-- no
+- yes
 
 Can your friend use it:
 - yes
 
 How:
 - clone from GitHub
-- deploy from `render.yaml`
+- either use the already-live Render service or redeploy from `render.yaml`
 - point the WhatsApp bot at `/profile`
 
-What URL should the bot eventually call:
-- `https://<service-name>.onrender.com/profile`
+What URL should the bot call now:
+- `https://linkedin-profile-brief-api.onrender.com/profile`
