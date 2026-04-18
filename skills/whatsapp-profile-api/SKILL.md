@@ -64,7 +64,7 @@ GitHub repo:
 - `https://github.com/Arnie016/ycombbot`
 
 Latest pushed commit when this handoff was written:
-- `6b184dc`
+- `ea04569`
 
 Can your friend use it right now:
 - yes, by cloning the GitHub repo and either:
@@ -78,6 +78,41 @@ Can you manual sync Render again after a new push:
 - yes
 - if the Blueprint is set to manual sync, every new GitHub push requires another `Manual sync`
 - if Auto Sync is enabled, Render will usually apply Blueprint changes automatically on push to the tracked branch
+
+## Quick Start
+
+If your friend only reads one section, use this one.
+
+Production base URL:
+- `https://linkedin-profile-brief-api.onrender.com`
+
+Main endpoint:
+- `POST https://linkedin-profile-brief-api.onrender.com/profile`
+
+Default production payload:
+
+```json
+{
+  "url": "<linkedin-url>",
+  "mode": "public_web_enriched",
+  "strictIdentity": true,
+  "researchMode": "balanced",
+  "maxProjects": 3,
+  "maxLinks": 4,
+  "includeWeakSignals": false
+}
+```
+
+What comes back:
+- one JSON object
+- cleaned profile card fields
+- strict identity handling
+- top projects when confidence is good
+- sparse but usable fallback when confidence is low
+- links at the end
+
+One-line summary:
+- input one LinkedIn link, output one research-backed networking card
 
 ## What The Backend Does
 
@@ -119,27 +154,91 @@ The backend, not the bot, owns:
 
 ## Endpoint Summary
 
-Public base URL:
-- `https://linkedin-profile-brief-api.onrender.com`
+### Bases
 
-Local base URL:
-- `http://localhost:3001`
+- public base:
+  - `https://linkedin-profile-brief-api.onrender.com`
+- local base:
+  - `http://localhost:3001`
 
-Main bot endpoint:
-- `POST /profile`
+### Production Endpoints
 
-Other endpoints:
 - `GET /health`
+  - fast health check
+  - no body
+  - use this first after deploy
+
+- `POST /profile`
+  - main bot JSON endpoint
+  - this is the endpoint the WhatsApp bot should use
+
 - `POST /profile/text`
+  - plain-text rendering
+  - useful for terminal testing, manual review, or direct WhatsApp formatting
+
 - `POST /profile/full`
+  - full debug payload
+  - includes raw scrape, discovery, and presentation internals
+  - not for normal bot use
+
+### Alias Endpoints
+
 - `POST /inspect`
 - `POST /inspect/text`
 - `POST /inspect/full`
 
-Use this in production:
-- `POST https://linkedin-profile-brief-api.onrender.com/profile`
+These currently map to the same behavior as the `/profile*` endpoints.
+Use `/profile*` going forward.
 
-Use this default request body:
+### Exact Full URLs
+
+- `https://linkedin-profile-brief-api.onrender.com/health`
+- `https://linkedin-profile-brief-api.onrender.com/profile`
+- `https://linkedin-profile-brief-api.onrender.com/profile/text`
+- `https://linkedin-profile-brief-api.onrender.com/profile/full`
+- `https://linkedin-profile-brief-api.onrender.com/inspect`
+- `https://linkedin-profile-brief-api.onrender.com/inspect/text`
+- `https://linkedin-profile-brief-api.onrender.com/inspect/full`
+
+### Local Full URLs
+
+- `http://localhost:3001/health`
+- `http://localhost:3001/profile`
+- `http://localhost:3001/profile/text`
+- `http://localhost:3001/profile/full`
+- `http://localhost:3001/inspect`
+- `http://localhost:3001/inspect/text`
+- `http://localhost:3001/inspect/full`
+
+### Request Body Options
+
+- `url`
+  - one LinkedIn URL
+- `urls`
+  - batch of LinkedIn URLs
+  - max 10
+- `mode`
+  - `url_only`
+  - `linkedin_only`
+  - `public_web_enriched`
+- `strictIdentity`
+  - `true` recommended
+- `researchMode`
+  - `strict`
+  - `balanced`
+  - `exploratory`
+- `maxProjects`
+  - `1..5`
+- `maxLinks`
+  - `1..6`
+- `includeWeakSignals`
+  - `true | false`
+- optional product context:
+  - `productName`
+  - `productSummary`
+  - `productKeywords`
+
+### Default Bot Request
 
 ```json
 {
@@ -151,6 +250,57 @@ Use this default request body:
   "maxLinks": 4,
   "includeWeakSignals": false
 }
+```
+
+### Curl Examples
+
+Health:
+
+```bash
+curl -s https://linkedin-profile-brief-api.onrender.com/health
+```
+
+JSON:
+
+```bash
+curl -s -X POST https://linkedin-profile-brief-api.onrender.com/profile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://www.linkedin.com/in/yangshun/",
+    "mode": "public_web_enriched",
+    "strictIdentity": true,
+    "researchMode": "balanced",
+    "maxProjects": 3,
+    "maxLinks": 4,
+    "includeWeakSignals": false
+  }'
+```
+
+Text:
+
+```bash
+curl -s -X POST https://linkedin-profile-brief-api.onrender.com/profile/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://www.linkedin.com/in/yangshun/",
+    "mode": "public_web_enriched",
+    "strictIdentity": true
+  }'
+```
+
+Batch:
+
+```bash
+curl -s -X POST https://linkedin-profile-brief-api.onrender.com/profile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "urls": [
+      "https://www.linkedin.com/in/yangshun/",
+      "https://www.linkedin.com/in/gabriel-chua/?skipRedirect=true"
+    ],
+    "mode": "public_web_enriched",
+    "strictIdentity": true
+  }'
 ```
 
 ## How Render Works For This Repo
