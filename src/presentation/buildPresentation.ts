@@ -641,10 +641,10 @@ function sparseWhatTheyDo(projects: BotProject[], skills: string[]): string | un
   }
 
   if (hasAISignals(projects, skills)) {
-    return "Public signals suggest they may be working on AI or developer tooling, but identity details are not confidently inferable.";
+    return "Low-public-footprint builder with signals around AI or developer tooling, but identity details are not confidently inferable from public sources.";
   }
 
-  return "Identity details are not confidently inferable from public sources.";
+  return "Low-public-footprint builder or operator; public details are limited, so the best next step is to ask directly what they are building lately.";
 }
 
 function sparseIntroAngle(projects: BotProject[], skills: string[]): string {
@@ -656,7 +656,7 @@ function sparseIntroAngle(projects: BotProject[], skills: string[]): string {
     return "Lead with a simple builder question about what they are building lately.";
   }
 
-  return "Lead with a simple question about what they are building lately.";
+  return "Lead with a simple founder/operator question: what are you building lately?";
 }
 
 export function buildPresentation(
