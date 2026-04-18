@@ -52,6 +52,8 @@ curl -s -X POST http://localhost:3001/profile \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://www.linkedin.com/in/yangshun/?skipRedirect=true",
+    "mode": "public_web_enriched",
+    "strictIdentity": true,
     "researchMode": "balanced",
     "maxProjects": 3,
     "maxLinks": 4,
@@ -83,6 +85,11 @@ curl -s -X POST http://localhost:3001/profile \
 - Use batch mode only for admin/research workflows
 
 Optional request controls:
+- `mode`
+  - `url_only`
+  - `linkedin_only`
+  - `public_web_enriched`
+- `strictIdentity`: `true|false`
 - `researchMode`
   - `strict`
   - `balanced`
@@ -95,6 +102,10 @@ Optional request controls:
 
 ```json
 {
+  "kind": "profile | company | school | job | post | article | legacy_profile | directory | unknown",
+  "stableId": "string",
+  "hostVariant": "string",
+  "canonicalSlug": "string",
   "name": "string",
   "slug": "string",
   "headline": "string",
@@ -149,6 +160,15 @@ Render fields in this order:
 If a field is missing, omit it.
 Do not print raw authwall/debug language unless the result is thin.
 
+Mode guidance:
+- `url_only`: classification only, no page facts, no external research
+- `linkedin_only`: only facts visible on LinkedIn itself
+- `public_web_enriched`: LinkedIn plus public web evidence
+
+Identity rule:
+- keep `strictIdentity: true` for the bot
+- that prevents vanity slugs and weak external matches from becoming fake names
+
 ## Example WhatsApp Message
 
 ```text
@@ -173,14 +193,15 @@ Frontend engineering educator with strong product and open-source credibility.
 For each LinkedIn URL:
 
 1. Normalize LinkedIn URL
-2. Fetch LinkedIn page with Playwright
-3. Detect `public`, `authwall`, or `partial`
-4. Run public-web discovery from the LinkedIn slug/name anchor
-5. Expand strong public profiles:
+2. Classify the LinkedIn object type and stable identifier
+3. If mode allows, fetch LinkedIn page with Playwright
+4. Detect `public`, `authwall`, or `partial`
+5. If mode allows, run public-web discovery from the LinkedIn anchor
+6. Expand strong public profiles:
    - Devpost portfolio -> project pages
    - GitHub profile -> pinned repos
-6. Rank public evidence
-7. Return structured fields
+7. Rank public evidence
+8. Return structured fields
 
 Important:
 
@@ -218,6 +239,16 @@ For more freedom on thin profiles:
 }
 ```
 
+For maximum authenticity:
+
+```json
+{
+  "url": "https://www.linkedin.com/in/example-person/",
+  "mode": "linkedin_only",
+  "strictIdentity": true
+}
+```
+
 ## Current Local Run
 
 ```bash
@@ -244,15 +275,31 @@ This repo already includes:
 
 Deploy steps:
 
-1. Put `/Users/arnav/Desktop/ycomb` into a GitHub repo
-2. Push the repo
-3. Create a new Render Web Service
-4. Connect the GitHub repo
-5. Use the included `render.yaml`
-6. Set:
+Repo to connect:
+
+```text
+https://github.com/Arnie016/ycombbot
+```
+
+Exact steps in Render:
+
+1. Open Render dashboard
+2. Click `New`
+3. Click `Blueprint`
+4. Connect `Arnie016/ycombbot`
+5. Confirm Render detects `render.yaml`
+6. In the service env vars, set:
    - `EXA_API_KEY`
    - `OPENAI_API_KEY`
-7. Deploy
+7. Leave the rest from the blueprint:
+   - runtime `node`
+   - region `singapore`
+   - health check `/health`
+8. Click `Apply`
+9. Wait for the first deploy to finish
+10. Open:
+   - `https://<service-name>.onrender.com/health`
+   - `https://<service-name>.onrender.com/profile`
 
 Expected live URLs:
 

@@ -8,7 +8,8 @@ import { buildBotProfile, buildBotText, buildPresentation, type ProfileBuildOpti
 import { discoverPublicProfileEvidence } from "./providers/exa.js";
 import { fetchLinkedInPage } from "./scraper/fetchLinkedInPage.js";
 import { extractLinkedInData } from "./scraper/extractLinkedInData.js";
-import { ensureLinkedInUrl } from "./utils/linkedin.js";
+import type { BotProfileResponse, RawLinkedInEntity, ScrapeResponse } from "./types.js";
+import { describeLinkedInUrl, ensureLinkedInUrl } from "./utils/linkedin.js";
 
 const app = express();
 const config = getConfig();
@@ -16,6 +17,8 @@ const config = getConfig();
 const inspectSchema = z.object({
   url: z.string().min(1).optional(),
   urls: z.array(z.string().min(1)).max(10).optional(),
+  mode: z.enum(["url_only", "linkedin_only", "public_web_enriched"]).optional(),
+  strictIdentity: z.boolean().optional(),
   productName: z.string().trim().min(1).optional(),
   productSummary: z.string().trim().min(1).optional(),
   productKeywords: z.array(z.string().trim().min(1)).max(12).optional(),
@@ -50,13 +53,20 @@ async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSch
     researchMode: parsed.researchMode,
     maxProjects: parsed.maxProjects,
     maxLinks: parsed.maxLinks,
-    includeWeakSignals: parsed.includeWeakSignals
+    includeWeakSignals: parsed.includeWeakSignals,
+    strictIdentity: parsed.strictIdentity
   };
   const url = ensureLinkedInUrl(urlInput);
-  const discoveryPromise = discoverPublicProfileEvidence({
+  const allowDiscovery = (parsed.mode ?? "public_web_enriched") === "public_web_enriched";
+  const descriptor = describeLinkedInUrl(url);
+  const seedEntity: RawLinkedInEntity = {
     type: "unknown",
     url: url.toString(),
     canonicalUrl: url.toString(),
+    kind: descriptor.kind,
+    stableId: descriptor.stableId,
+    hostVariant: descriptor.hostVariant,
+    trackingParams: descriptor.trackingParams,
     access: {
       finalUrl: url.toString(),
       isAuthwall: false,
@@ -66,7 +76,51 @@ async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSch
     sections: [],
     sourceSignals: [],
     notes: []
-  });
+  };
+  const discoveryPromise = allowDiscovery ? discoverPublicProfileEvidence(seedEntity) : undefined;
+
+  if ((parsed.mode ?? "public_web_enriched") === "url_only") {
+    const botProfile: BotProfileResponse = {
+      kind: seedEntity.kind,
+      stableId: seedEntity.stableId,
+      hostVariant: seedEntity.hostVariant,
+      canonicalSlug: descriptor.canonicalSlug,
+      name: "Unknown profile",
+      slug: descriptor.canonicalSlug,
+      status: "partial",
+      awards: [],
+      impressiveProjects: [],
+      topSkills: [],
+      strongestSignals: [],
+      links: [
+        {
+          label: "linkedin.com",
+          url: url.toString()
+        }
+      ],
+      nextStep: "URL-only mode returns only LinkedIn object classification and stable identifiers."
+    };
+    const fullPayload: ScrapeResponse = {
+      scrapedAt: new Date().toISOString(),
+      entity: seedEntity,
+      topThree: [],
+      networking: {
+        score: 0,
+        whyThisMatters: "",
+        recommendedAngle: ""
+      },
+      outreach: {
+        opener: "",
+        shareText: ""
+      }
+    };
+
+    return {
+      fullPayload,
+      botProfile
+    };
+  }
+
   const fetchedPage = await fetchLinkedInPage({
     url: url.toString(),
     timeoutMs: config.scraperTimeoutMs,
@@ -81,7 +135,11 @@ async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSch
     productSummary: parsed.productSummary,
     productKeywords: parsed.productKeywords
   });
-  const enrichment = await enrichProfile(entity, discoveryPromise);
+  const allowSynthesis = (parsed.mode ?? "public_web_enriched") !== "linkedin_only" || !parsed.strictIdentity;
+  const enrichment = await enrichProfile(entity, discoveryPromise, {
+    enableDiscovery: allowDiscovery,
+    enableSynthesis: allowSynthesis
+  });
   const fullPayload = {
     ...payload,
     discovery: enrichment.discovery,

@@ -21,7 +21,6 @@ Current local dev URL:
 Production deployment:
 - not configured yet in this repo
 - use `render.yaml` at repo root to create the Render web service
-- this workspace is not currently a git repo, so deployment starts by putting this folder into GitHub
 
 GitHub repo:
 - `https://github.com/Arnie016/ycombbot`
@@ -49,6 +48,8 @@ Single profile request:
 ```json
 {
   "url": "https://www.linkedin.com/in/example-person/",
+  "mode": "public_web_enriched",
+  "strictIdentity": true,
   "productName": "WarmIntro",
   "productSummary": "WhatsApp-first networking assistant that turns public profiles into intro-ready briefs.",
   "productKeywords": ["networking", "introductions", "whatsapp"],
@@ -79,6 +80,13 @@ Rules:
 - batch mode returns `{ "profiles": [...] }`
 
 Optional request controls:
+- `mode`
+  - `url_only`: URL classification only
+  - `linkedin_only`: LinkedIn-visible facts only
+  - `public_web_enriched`: LinkedIn plus public web evidence
+- `strictIdentity`
+  - `true`: do not promote weak slug or external matches into person identity
+  - `false`: allow more permissive naming fallback
 - `researchMode`
   - `strict`: prefer higher-confidence artifacts, fewer weak links and fewer LinkedIn posts
   - `balanced`: default
@@ -108,6 +116,10 @@ Single profile response from `POST /profile`:
 
 ```json
 {
+  "kind": "profile | company | school | job | post | article | legacy_profile | directory | unknown",
+  "stableId": "string",
+  "hostVariant": "string",
+  "canonicalSlug": "string",
   "name": "string",
   "slug": "string",
   "headline": "string",
@@ -206,17 +218,18 @@ Intro angle: ...
 For each LinkedIn URL:
 
 1. Normalize the LinkedIn URL.
-2. Fetch the LinkedIn page with Playwright.
-3. Detect:
+2. Classify the LinkedIn object type and stable identifier.
+3. If the selected mode allows, fetch the LinkedIn page with Playwright.
+4. Detect:
    - `public`
    - `authwall`
    - `partial`
-4. In parallel, run public-web discovery from the LinkedIn slug/name anchor.
-5. Expand strong public profiles:
+5. If the selected mode allows, run public-web discovery from the LinkedIn slug/name anchor.
+6. Expand strong public profiles:
    - Devpost portfolio -> project pages
    - GitHub profile -> pinned repositories
-6. Rank evidence.
-7. Return structured fields.
+7. Rank evidence.
+8. Return structured fields.
 
 Important:
 - this service does **not** log into LinkedIn
@@ -251,6 +264,16 @@ If you want more degree of freedom:
 }
 ```
 
+If authenticity matters more than recall:
+
+```json
+{
+  "url": "https://www.linkedin.com/in/example-person/",
+  "mode": "linkedin_only",
+  "strictIdentity": true
+}
+```
+
 ## Environment Variables
 
 Required for best results:
@@ -272,21 +295,28 @@ PORT=3001 npm run dev
 
 Use these exact steps:
 
-1. Put `/Users/arnav/Desktop/ycomb` into a GitHub repo.
-2. Push the repo to GitHub.
-3. In Render, create a new `Web Service`.
-4. Connect the GitHub repo.
-5. Let Render read `/Users/arnav/Desktop/ycomb/render.yaml`.
+1. Open Render dashboard.
+2. Click `New`.
+3. Click `Blueprint`.
+4. Connect `Arnie016/ycombbot`.
+5. Let Render read the repo-root `render.yaml`.
 6. Set the secret env vars:
    - `EXA_API_KEY`
    - `OPENAI_API_KEY`
-7. Deploy.
+7. Keep the blueprint defaults:
+   - runtime `node`
+   - region `singapore`
+   - health check `/health`
+8. Click `Apply`.
+9. Wait for the first deploy to finish.
 
 Render settings expected by this repo:
 - runtime: `node`
 - build command: `npm install && npx playwright install chromium && npm run build`
 - start command: `npm run start`
 - region: `singapore`
+- health check: `/health`
+- browsers path: `/opt/render/project/.render-playwright`
 
 After deploy, the live base URL will look like:
 - `https://<service-name>.onrender.com`

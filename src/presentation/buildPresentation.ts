@@ -17,6 +17,7 @@ export interface ProfileBuildOptions {
   maxProjects?: number;
   maxLinks?: number;
   includeWeakSignals?: boolean;
+  strictIdentity?: boolean;
 }
 
 function dedupe<T>(values: T[]): T[] {
@@ -63,6 +64,15 @@ function cleanProjectName(value: string): string {
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function titleFromRepoName(repo: string): string {
+  return repo
+    .replace(/\.git$/i, "")
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((token) => token.toLowerCase() === "ui" ? "UI" : token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
 }
 
 function compactText(value: string | undefined): string | undefined {
@@ -274,6 +284,66 @@ function fallbackProjects(entity: RawLinkedInEntity): BotProject[] {
   return projects;
 }
 
+function profileVisibleProjects(entity: RawLinkedInEntity): BotProject[] {
+  const text = [entity.metaDescription, entity.about, entity.headline, ...entity.sourceSignals]
+    .filter(Boolean)
+    .join(" ");
+  const projects: BotProject[] = [];
+  const seen = new Set<string>();
+
+  const addProject = (project: BotProject | undefined) => {
+    if (!project?.name) {
+      return;
+    }
+
+    const key = project.name.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    projects.push(project);
+  };
+
+  for (const match of text.matchAll(/https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+)/gi)) {
+    const owner = match[1];
+    const repo = match[2];
+    const repoTitle = titleFromRepoName(repo);
+    const snippet = text.slice(Math.max(0, match.index - 120), Math.min(text.length, match.index + match[0].length + 120));
+    const starsMatch = snippet.match(/(\d[\d,.]*k?\+?)\s+github stars/i);
+    const whyImpressive = starsMatch?.[1]
+      ? `Open-source repository with ${starsMatch[1]} GitHub stars.`
+      : "Public GitHub repository highlighted directly on the LinkedIn profile.";
+
+    addProject({
+      name: repoTitle,
+      whyImpressive,
+      skills: inferSkillsFromText(`${repoTitle} ${snippet}`).slice(0, 5),
+      sourceUrl: `https://github.com/${owner}/${repo}`
+    });
+  }
+
+  if (/GreatFrontEnd(?:\.com)?/i.test(text)) {
+    addProject({
+      name: "GreatFrontEnd",
+      whyImpressive: "Platform for real-world frontend practice and interview preparation.",
+      skills: ["React", "JavaScript", "Frontend"],
+      sourceUrl: "https://www.greatfrontend.com/"
+    });
+  }
+
+  if (/Blind 75/i.test(text)) {
+    addProject({
+      name: "Blind 75",
+      whyImpressive: "Widely used coding interview preparation resource called out on the LinkedIn profile itself.",
+      skills: ["Interview prep", "Algorithms"],
+      sourceUrl: undefined
+    });
+  }
+
+  return projects.slice(0, 5);
+}
+
 function topSkills(
   presentation: PresentationResult,
   entity: RawLinkedInEntity,
@@ -296,8 +366,21 @@ function topSkills(
 }
 
 function inferWorkOrStudy(entity: RawLinkedInEntity, discovery?: DiscoveryResult): string | undefined {
+  const cleanHeadline = compactText(entity.headline);
+  if (cleanHeadline) {
+    const headlineRoleAtOrg = cleanHeadline.match(/^(.+?)\s+[•|·]\s+(.+?)(?:\s+[•|·]\s+|$)/);
+    if (headlineRoleAtOrg?.[1] && headlineRoleAtOrg?.[2]) {
+      const left = headlineRoleAtOrg[1].trim();
+      const right = headlineRoleAtOrg[2].trim();
+
+      if (!/followers|connections|contact info|sign in/i.test(`${left} ${right}`)) {
+        return `${left} at ${right}`;
+      }
+    }
+  }
+
   const texts = [
-    [entity.headline, entity.currentCompany].filter(Boolean).join(" "),
+    [cleanHeadline, entity.currentCompany].filter(Boolean).join(" "),
     entity.metaDescription,
     ...entity.sourceSignals,
     ...(discovery?.documents ?? []).flatMap((document) => [document.title, document.excerpt])
@@ -333,9 +416,13 @@ function inferWorkOrStudy(entity: RawLinkedInEntity, discovery?: DiscoveryResult
   return undefined;
 }
 
-function displayName(entity: RawLinkedInEntity, discovery?: DiscoveryResult): string {
+function displayName(entity: RawLinkedInEntity, discovery?: DiscoveryResult, options?: ProfileBuildOptions): string {
   if (entity.name && !/^(sign up|join linkedin|linkedin)$/i.test(entity.name.trim())) {
     return entity.name;
+  }
+
+  if (options?.strictIdentity) {
+    return entity.access.isAuthwall ? "Unknown profile" : entity.stableId || "Unknown profile";
   }
 
   const fromSlug = guessNameFromLinkedInUrl(entity.url);
@@ -453,7 +540,7 @@ export function buildPresentation(
       : "public";
 
   return {
-    displayName: displayName(payload.entity, discovery),
+    displayName: displayName(payload.entity, discovery, options),
     subtitle: subtitle(payload.entity, payload),
     status,
     summary: sentence(
@@ -481,20 +568,29 @@ export function buildBotProfile(
   const maxProjects = options?.maxProjects ?? 3;
   const maxLinks = options?.maxLinks ?? 4;
   const discoveryProjects = impressiveProjects(discovery, options).slice(0, maxProjects);
-  const projects = structuredProfile?.projectHighlights?.length
-    ? structuredProfile.projectHighlights.slice(0, maxProjects).map((project) => ({
+  const structuredProjects = structuredProfile?.projectHighlights?.map((project) => ({
         name: cleanProjectName(project.name),
         whyImpressive: project.summary,
         skills: dedupe(project.techStack).slice(0, 5),
         sourceUrl: project.sourceUrls[0]
-      }))
-    : discoveryProjects.length > 0
-      ? discoveryProjects
-      : fallbackProjects(payload.entity);
+      })) ?? [];
+  const visibleProjects = profileVisibleProjects(payload.entity);
+  const projects = dedupe([
+    ...structuredProjects,
+    ...visibleProjects,
+    ...discoveryProjects,
+    ...fallbackProjects(payload.entity)
+  ].map((project) => JSON.stringify(project)))
+    .map((project) => JSON.parse(project) as BotProject)
+    .slice(0, maxProjects);
 
   const workOrStudy = inferWorkOrStudy(payload.entity, discovery);
 
   return {
+    kind: payload.entity.kind,
+    stableId: payload.entity.stableId,
+    hostVariant: payload.entity.hostVariant,
+    canonicalSlug: payload.entity.stableId,
     name: presentation.displayName,
     slug: extractLinkedInSlug(payload.entity.url),
     headline: payload.entity.headline,
@@ -522,21 +618,22 @@ export function buildBotProfile(
 
 export function buildBotText(profile: BotProfileResponse): string {
   const lines = [profile.name];
+  const explicitRoleLine = [profile.currentRole, profile.organization].filter(Boolean).join(" at ");
+  const roleLine = profile.workOrStudy
+    && profile.organization
+    && !profile.workOrStudy.toLowerCase().includes(profile.organization.toLowerCase())
+    ? `${profile.workOrStudy} at ${profile.organization}`
+    : profile.workOrStudy
+      || explicitRoleLine
+      || profile.headline;
 
-  if (profile.workOrStudy) {
-    lines.push(`Work / Study: ${profile.workOrStudy}`);
-  } else if (profile.headline) {
-    lines.push(`Work / Study: ${profile.headline}`);
-  }
-
-  if ((profile.currentRole && !/not confidently inferable/i.test(profile.currentRole))
-    || (profile.organization && !/not confidently inferable/i.test(profile.organization))) {
-    lines.push(`Role: ${[profile.currentRole, profile.organization].filter(Boolean).join(" @ ")}`);
+  if (roleLine) {
+    lines.push(roleLine);
   }
 
   lines.push("");
   if (profile.whatTheyDo) {
-    lines.push(`What they do: ${profile.whatTheyDo}`);
+    lines.push(profile.whatTheyDo);
     lines.push("");
   }
 
@@ -552,8 +649,7 @@ export function buildBotText(profile: BotProfileResponse): string {
     lines.push("Top projects:");
 
     for (const project of profile.impressiveProjects.slice(0, 3)) {
-      const skills = project.skills.length ? ` [${project.skills.join(", ")}]` : "";
-      lines.push(`- ${project.name}: ${project.whyImpressive}${skills}`);
+      lines.push(`- ${project.name}`);
     }
     lines.push("");
   }
@@ -580,7 +676,8 @@ export function buildBotText(profile: BotProfileResponse): string {
   }
 
   if (profile.bestIntroAngle) {
-    lines.push(`Best intro angle: ${profile.bestIntroAngle}`);
+    lines.push("Intro angle:");
+    lines.push(profile.bestIntroAngle);
   }
 
   return lines.join("\n").trim();

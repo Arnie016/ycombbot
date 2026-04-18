@@ -1,3 +1,5 @@
+import type { LinkedInObjectKind } from "./utils/linkedin.js";
+
 export type LinkedInEntityType = "person" | "company" | "unknown";
 
 export interface ProductContext {
@@ -111,6 +113,10 @@ export interface BotLink {
 }
 
 export interface BotProfileResponse {
+  kind?: LinkedInObjectKind;
+  stableId?: string;
+  hostVariant?: string;
+  canonicalSlug?: string;
   name: string;
   slug?: string;
   headline?: string;
@@ -130,6 +136,10 @@ export interface BotProfileResponse {
 }
 
 export interface RawLinkedInEntity {
+  kind?: LinkedInObjectKind;
+  stableId?: string;
+  hostVariant?: string;
+  trackingParams?: Record<string, string>;
   type: LinkedInEntityType;
   url: string;
   canonicalUrl: string;

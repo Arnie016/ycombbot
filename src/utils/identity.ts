@@ -1,5 +1,28 @@
 import type { RawLinkedInEntity } from "../types.js";
 
+const HANDLE_TOKENS = new Set([
+  "ai",
+  "app",
+  "apps",
+  "builder",
+  "builds",
+  "coach",
+  "code",
+  "creator",
+  "dev",
+  "digital",
+  "founder",
+  "hq",
+  "inc",
+  "io",
+  "lab",
+  "labs",
+  "official",
+  "studio",
+  "tech",
+  "x"
+]);
+
 function titleCaseToken(token: string): string {
   if (!token) {
     return token;
@@ -37,12 +60,12 @@ export function guessNameFromLinkedInUrl(url: string): string | undefined {
       break;
     }
 
-    if (/^[a-z]+$/i.test(token)) {
+    if (/^[a-z]+$/i.test(token) && !HANDLE_TOKENS.has(token.toLowerCase()) && token.length >= 2) {
       nameTokens.push(token);
     }
   }
 
-  if (!nameTokens.length) {
+  if (nameTokens.length < 2) {
     return undefined;
   }
 

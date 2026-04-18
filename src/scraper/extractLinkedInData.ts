@@ -1,7 +1,7 @@
 import { load, type CheerioAPI } from "cheerio";
 import type { FetchedLinkedInPage } from "./fetchLinkedInPage.js";
 import type { RawLinkedInEntity } from "../types.js";
-import { detectLinkedInEntityType, normalizeWhitespace, pickFirst } from "../utils/linkedin.js";
+import { describeLinkedInUrl, detectLinkedInEntityType, normalizeWhitespace, pickFirst } from "../utils/linkedin.js";
 
 interface ExtractLinkedInDataInput {
   fetchedPage: FetchedLinkedInPage;
@@ -157,6 +157,7 @@ export function extractLinkedInData(input: ExtractLinkedInDataInput): RawLinkedI
   const $ = load(input.fetchedPage.html);
   const jsonLdPayloads = parseJsonLd($);
   const type = detectLinkedInEntityType(input.url);
+  const descriptor = describeLinkedInUrl(input.url);
   const metaDescription = cleanAuthwallText(
     attrAt($, ['meta[name="description"]', 'meta[property="og:description"]'], "content"),
     input.fetchedPage.isAuthwall
@@ -229,6 +230,10 @@ export function extractLinkedInData(input: ExtractLinkedInDataInput): RawLinkedI
     sourceSignals.push(...[name, headline, about, currentCompany].filter(Boolean) as string[]);
 
     return {
+      kind: descriptor.kind,
+      stableId: descriptor.stableId,
+      hostVariant: descriptor.hostVariant,
+      trackingParams: descriptor.trackingParams,
       type,
       url: input.url.toString(),
       canonicalUrl,
@@ -286,8 +291,12 @@ export function extractLinkedInData(input: ExtractLinkedInDataInput): RawLinkedI
 
     sourceSignals.push(...[name, headline, about, industry, followerCount].filter(Boolean) as string[]);
 
-    return {
-      type,
+  return {
+    kind: descriptor.kind,
+    stableId: descriptor.stableId,
+    hostVariant: descriptor.hostVariant,
+    trackingParams: descriptor.trackingParams,
+    type,
       url: input.url.toString(),
       canonicalUrl,
       access: {

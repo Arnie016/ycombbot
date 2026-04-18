@@ -52,6 +52,8 @@ Request:
 ```json
 {
   "url": "https://www.linkedin.com/in/example-person/",
+  "mode": "public_web_enriched",
+  "strictIdentity": true,
   "productName": "WarmIntro",
   "productSummary": "WhatsApp-first networking assistant that turns public profiles into intro-ready briefs.",
   "productKeywords": ["networking", "sales", "introductions", "whatsapp"]
@@ -62,6 +64,10 @@ Response shape:
 
 ```json
 {
+  "kind": "profile | company | school | job | post | article | legacy_profile | directory | unknown",
+  "stableId": "example-person",
+  "hostVariant": "www.linkedin.com",
+  "canonicalSlug": "example-person",
   "name": "Example Person",
   "slug": "example-person-123",
   "workOrStudy": "Student at NUS",
@@ -142,6 +148,43 @@ Quick script:
 chmod +x scripts/profile_card.sh
 scripts/profile_card.sh "https://www.linkedin.com/in/example-person/"
 ```
+
+## Modes
+
+- `url_only`
+  returns only LinkedIn object classification and stable identifiers
+- `linkedin_only`
+  returns only facts visible on LinkedIn itself
+- `public_web_enriched`
+  combines LinkedIn-visible facts with public-web evidence
+
+Keep `strictIdentity: true` for the bot so vanity slugs like `ojasx` do not become fake names.
+
+## Deploy to Render
+
+GitHub repo:
+
+```text
+https://github.com/Arnie016/ycombbot
+```
+
+This repo already includes `render.yaml`.
+
+Render steps:
+
+1. In Render, click `New`.
+2. Choose `Blueprint`.
+3. Connect `Arnie016/ycombbot`.
+4. Let Render read `render.yaml`.
+5. Set `EXA_API_KEY`.
+6. Set `OPENAI_API_KEY`.
+7. Apply the blueprint.
+
+Expected live endpoints:
+
+- `https://<service-name>.onrender.com/health`
+- `https://<service-name>.onrender.com/profile`
+- `https://<service-name>.onrender.com/profile/text`
 
 ## Basic WhatsApp bot workflow
 
