@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
+    "assert:profile-intake": "npm run build && node scripts/assert_profile_intake.mjs",
+    "assert:profile-intake-endpoint": "npm run build && node scripts/assert_profile_intake_endpoint.mjs",
     "assert:strict-identity": "npm run build && node scripts/assert_strict_identity.mjs",
     "start": "node dist/index.js"
   },

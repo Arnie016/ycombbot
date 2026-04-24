@@ -44,6 +44,58 @@ Returns a basic health payload.
   Terminal-friendly text card.
 - `POST /profile/full`
   Debug payload with raw discovery and structured evidence.
+- `POST /intake/classify`
+  Universal URL classification for LinkedIn, GitHub, Devpost, Hugging Face, X/Twitter, blogs, resumes, and personal sites.
+
+### `POST /intake/classify`
+
+This endpoint is the first universal intake contract. It does not fetch or infer identity. It classifies routing, provider, stable URL identifiers, and provenance so later enrichers can decide what evidence is safe to collect.
+
+Request:
+
+```json
+{
+  "urls": [
+    "https://www.linkedin.com/in/example-person/",
+    "https://github.com/example/example-repo",
+    "https://devpost.com/software/example-project",
+    "https://huggingface.co/spaces/example/demo",
+    "https://example.com/resume.pdf"
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "intakes": [
+    {
+      "provider": "github",
+      "objectKind": "repository",
+      "route": "public_artifact_enricher",
+      "stableId": "example/example-repo",
+      "identityGate": {
+        "canInferPersonIdentity": false,
+        "confidence": "low",
+        "reason": "GitHub repository URLs can provide project evidence, but they are not enough to identify a person without corroborating profile evidence."
+      },
+      "provenance": [
+        {
+          "field": "github_owner",
+          "value": "example",
+          "source": "url"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Strict identity rule:
+- URL handles and slugs are routing keys only.
+- Do not infer a person, role, school, company, or project ownership from a weak handle alone.
+- Public artifacts can support evidence after corroboration, but they are not identity by themselves.
 
 ### `POST /profile`
 

@@ -10,8 +10,9 @@ import { fetchLinkedInPage } from "./scraper/fetchLinkedInPage.js";
 import { extractLinkedInData } from "./scraper/extractLinkedInData.js";
 import type { BotProfileResponse, RawLinkedInEntity, ScrapeResponse } from "./types.js";
 import { describeLinkedInUrl, ensureLinkedInUrl } from "./utils/linkedin.js";
+import { classifyProfileUrl } from "./utils/profileIntake.js";
 
-const app = express();
+export const app = express();
 const config = getConfig();
 
 const inspectSchema = z.object({
@@ -35,6 +36,18 @@ const inspectSchema = z.object({
   }
 });
 
+const intakeSchema = z.object({
+  url: z.string().min(1).optional(),
+  urls: z.array(z.string().min(1)).max(20).optional()
+}).superRefine((value, context) => {
+  if (!value.url && (!value.urls || value.urls.length === 0)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide either url or urls."
+    });
+  }
+});
+
 app.use(express.json());
 
 app.get("/", (_request, response) => {
@@ -46,6 +59,47 @@ app.get("/health", (_request, response) => {
     ok: true,
     service: "linkedin-insight-scraper"
   });
+});
+
+export function classifyIntakeInternal(requestBody: unknown) {
+  const parsed = intakeSchema.safeParse(requestBody);
+
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: "Invalid request body.",
+        details: parsed.error.flatten()
+      }
+    };
+  }
+
+  try {
+    const urls = parsed.data.urls?.length ? parsed.data.urls : [parsed.data.url!];
+    const intakes = urls.map((urlInput) => classifyProfileUrl(urlInput));
+
+    return {
+      ok: true as const,
+      status: 200,
+      body: urls.length === 1 ? { intake: intakes[0] } : { intakes }
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown intake classification error.";
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: message
+      }
+    };
+  }
+}
+
+app.post("/intake/classify", (request, response) => {
+  const result = classifyIntakeInternal(request.body);
+
+  response.status(result.status).json(result.body);
 });
 
 async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSchema>) {
@@ -269,6 +323,8 @@ app.post("/profile/full", async (request, response) => {
   response.json("fullPayload" in result.body ? result.body.fullPayload : { profiles: result.body.fullPayloads });
 });
 
-app.listen(config.port, () => {
-  console.log(`linkedin-insight-scraper listening on http://localhost:${config.port}`);
-});
+if (process.env.NODE_ENV !== "test") {
+  app.listen(config.port, () => {
+    console.log(`linkedin-insight-scraper listening on http://localhost:${config.port}`);
+  });
+}
