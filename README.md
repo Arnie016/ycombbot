@@ -132,7 +132,7 @@ npm run dev
 Then call it:
 
 ```bash
-curl -X POST http://localhost:3000/profile \
+curl -X POST http://localhost:3001/profile \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://www.linkedin.com/company/openai/",

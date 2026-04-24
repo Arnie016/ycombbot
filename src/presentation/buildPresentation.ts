@@ -467,7 +467,7 @@ function displayName(entity: RawLinkedInEntity, discovery?: DiscoveryResult, opt
   }
 
   if (options?.strictIdentity) {
-    return entity.access.isAuthwall ? "Unknown profile" : entity.stableId || "Unknown profile";
+    return "Unknown profile";
   }
 
   const fromSlug = guessNameFromLinkedInUrl(entity.url);
@@ -586,9 +586,12 @@ function bestLinks(
 function buildConfidence(
   entity: RawLinkedInEntity,
   projects: BotProject[],
-  whatTheyDoValue: string | undefined
+  whatTheyDoValue: string | undefined,
+  options?: ProfileBuildOptions
 ): BotConfidence {
-  const identity = entity.name
+  const identity = options?.strictIdentity && !entity.name
+    ? "low"
+    : entity.name
     ? "high"
     : entity.access.isAuthwall
       ? "low"
@@ -718,8 +721,8 @@ export function buildBotProfile(
 
   const workOrStudy = inferWorkOrStudy(payload.entity, discovery);
   const whatTheyDoValue = whatTheyDo(payload.entity, structuredProfile, discovery);
-  const confidence = buildConfidence(payload.entity, projects, whatTheyDoValue);
-  const sparseIdentity = payload.entity.access.isAuthwall && confidence.identity === "low";
+  const confidence = buildConfidence(payload.entity, projects, whatTheyDoValue, options);
+  const sparseIdentity = Boolean(options?.strictIdentity && confidence.identity === "low");
   const skillList = topSkills(presentation, payload.entity, structuredProfile, discovery);
   const currentIdentity = sparseIdentity || structuredProfile?.currentIdentity?.confidence === "low"
     ? undefined
@@ -816,17 +819,17 @@ export function buildBotText(profile: BotProfileResponse): string {
     lines.push("");
   }
 
+  if (profile.bestIntroAngle) {
+    lines.push("Intro angle:");
+    lines.push(profile.bestIntroAngle);
+    lines.push("");
+  }
+
   if (profile.links.length) {
     lines.push("Links:");
     for (const link of profile.links) {
       lines.push(`- ${link.label}: ${link.url}`);
     }
-    lines.push("");
-  }
-
-  if (profile.bestIntroAngle) {
-    lines.push("Intro angle:");
-    lines.push(profile.bestIntroAngle);
   }
 
   return lines.join("\n").trim();

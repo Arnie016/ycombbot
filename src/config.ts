@@ -19,7 +19,7 @@ function readNumber(value: string | undefined, fallback: number): number {
 
 export function getConfig(): AppConfig {
   return {
-    port: readNumber(process.env.PORT, 3000),
+    port: readNumber(process.env.PORT, 3001),
     scraperTimeoutMs: readNumber(process.env.SCRAPER_TIMEOUT_MS, 20_000),
     scraperHeadless: readBoolean(process.env.SCRAPER_HEADLESS, true)
   };

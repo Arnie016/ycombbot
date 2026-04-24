@@ -49,12 +49,13 @@ app.get("/health", (_request, response) => {
 });
 
 async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSchema>) {
+  const strictIdentity = parsed.strictIdentity ?? true;
   const buildOptions: ProfileBuildOptions = {
     researchMode: parsed.researchMode,
     maxProjects: parsed.maxProjects,
     maxLinks: parsed.maxLinks,
     includeWeakSignals: parsed.includeWeakSignals,
-    strictIdentity: parsed.strictIdentity
+    strictIdentity
   };
   const url = ensureLinkedInUrl(urlInput);
   const allowDiscovery = (parsed.mode ?? "public_web_enriched") === "public_web_enriched";
@@ -135,7 +136,7 @@ async function inspectSingle(urlInput: string, parsed: z.infer<typeof inspectSch
     productSummary: parsed.productSummary,
     productKeywords: parsed.productKeywords
   });
-  const allowSynthesis = (parsed.mode ?? "public_web_enriched") !== "linkedin_only" || !parsed.strictIdentity;
+  const allowSynthesis = (parsed.mode ?? "public_web_enriched") !== "linkedin_only" || !strictIdentity;
   const enrichment = await enrichProfile(entity, discoveryPromise, {
     enableDiscovery: allowDiscovery,
     enableSynthesis: allowSynthesis

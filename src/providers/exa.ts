@@ -290,6 +290,16 @@ function looksAnchoredToPerson(document: DiscoveryDocument, anchorName?: string)
   return false;
 }
 
+function includesExactSlug(document: DiscoveryDocument, slug: string | undefined): boolean {
+  if (!slug) {
+    return false;
+  }
+
+  const haystack = `${document.url} ${document.title} ${document.excerpt ?? ""}`.toLowerCase();
+  const escapedSlug = slug.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escapedSlug}([^a-z0-9]|$)`, "i").test(haystack);
+}
+
 export async function discoverPublicProfileEvidence(entity: RawLinkedInEntity): Promise<DiscoveryResult | undefined> {
   const apiKey = process.env.EXA_API_KEY;
 
@@ -299,6 +309,7 @@ export async function discoverPublicProfileEvidence(entity: RawLinkedInEntity): 
 
   const queryHints = buildDiscoveryQueries(entity);
   const anchorName = entity.name ?? guessNameFromLinkedInUrl(entity.url);
+  const exactSlug = entity.name ? undefined : entity.stableId;
   const documents = new Map<string, DiscoveryDocument>();
   const notes: string[] = [];
 
@@ -344,7 +355,11 @@ export async function discoverPublicProfileEvidence(entity: RawLinkedInEntity): 
 
     for (const result of response.payload.results ?? []) {
       const document = normalizeDocument(result);
-      if (document && looksAnchoredToPerson(document, anchorName)) {
+      if (
+        document
+        && looksAnchoredToPerson(document, anchorName)
+        && (!exactSlug || includesExactSlug(document, exactSlug))
+      ) {
         documents.set(document.url, document);
       }
     }
@@ -357,7 +372,11 @@ export async function discoverPublicProfileEvidence(entity: RawLinkedInEntity): 
   const expansions = await Promise.all(expandable.map((document) => expandPublicProfile(document)));
   for (const expandedDocuments of expansions) {
     for (const document of expandedDocuments) {
-      if (isUsefulUrl(document.url) && looksAnchoredToPerson(document, anchorName)) {
+      if (
+        isUsefulUrl(document.url)
+        && looksAnchoredToPerson(document, anchorName)
+        && (!exactSlug || includesExactSlug(document, exactSlug))
+      ) {
         documents.set(document.url, document);
       }
     }

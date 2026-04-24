@@ -73,13 +73,16 @@ export function guessNameFromLinkedInUrl(url: string): string | undefined {
 }
 
 export function buildDiscoveryQueries(entity: RawLinkedInEntity): string[] {
-  const name = entity.name ?? guessNameFromLinkedInUrl(entity.url);
+  const name = entity.name;
   const queries = new Set<string>();
   const currentCompany = entity.currentCompany?.trim();
   const slug = extractLinkedInSlug(entity.url);
 
   if (name) {
     queries.add(`"${name}"`);
+    if (currentCompany) {
+      queries.add(`"${name}" "${currentCompany}"`);
+    }
     queries.add(`"${name}" github`);
     queries.add(`"${name}" devpost`);
     queries.add(`"${name}" hugging face OR huggingface`);
@@ -93,10 +96,6 @@ export function buildDiscoveryQueries(entity: RawLinkedInEntity): string[] {
     queries.add(`"${name}" university OR school OR student`);
     queries.add(`"${name}" founder OR engineer OR developer OR researcher`);
     queries.add(`"${name}" open source OR repository OR github`);
-  }
-
-  if (name && currentCompany) {
-    queries.add(`"${name}" "${currentCompany}"`);
   }
 
   if (slug) {
