@@ -56,4 +56,14 @@ assert.equal(website.route, "website_metadata_probe");
 assert.equal(website.card, undefined);
 assert.match(website.notes.join(" "), /No public artifact card/);
 
+const githubTopic = enrichPublicArtifact("https://github.com/topics/react");
+assert.equal(githubTopic.route, "unsupported");
+assert.equal(githubTopic.card, undefined);
+assert.match(githubTopic.notes.join(" "), /reserved route|No public artifact card/);
+
+const githubOrgSubpage = enrichPublicArtifact("https://github.com/orgs/openai/repositories");
+assert.equal(githubOrgSubpage.route, "unsupported");
+assert.equal(githubOrgSubpage.card, undefined);
+assert.match(githubOrgSubpage.notes.join(" "), /reserved route|No public artifact card/);
+
 console.log("public artifact enrichment assertions passed");

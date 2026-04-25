@@ -40,6 +40,28 @@ assertIntake("https://github.com/gaearon", {
   handle: "gaearon"
 });
 
+assertIntake("https://github.com/orgs/openai", {
+  provider: "github",
+  objectKind: "profile",
+  route: "public_artifact_enricher",
+  stableId: "openai",
+  handle: "openai"
+});
+
+const githubTopic = assertIntake("https://github.com/topics/react", {
+  provider: "github",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(githubTopic.stableId, undefined);
+
+const githubOrgSubpage = assertIntake("https://github.com/orgs/openai/repositories", {
+  provider: "github",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(githubOrgSubpage.stableId, undefined);
+
 assertIntake("https://devpost.com/software/pacman-ai", {
   provider: "devpost",
   objectKind: "project",

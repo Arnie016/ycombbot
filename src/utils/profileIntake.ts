@@ -88,6 +88,29 @@ const BLOG_HOSTS = [
   "hashnode.dev",
   "mirror.xyz"
 ];
+const GITHUB_RESERVED_ROOTS = new Set([
+  "about",
+  "apps",
+  "collections",
+  "customer-stories",
+  "enterprise",
+  "events",
+  "explore",
+  "features",
+  "github-copilot",
+  "login",
+  "marketplace",
+  "new",
+  "notifications",
+  "organizations",
+  "pricing",
+  "pulls",
+  "search",
+  "settings",
+  "sponsors",
+  "topics",
+  "trending"
+]);
 
 function parseUrl(rawUrl: string): URL {
   let candidate = rawUrl.trim();
@@ -274,7 +297,33 @@ function classifyLinkedIn(rawUrl: string, url: URL): ProfileUrlIntake {
 
 function classifyGitHub(rawUrl: string, url: URL): ProfileUrlIntake {
   const base = baseResult(rawUrl, url, "github");
-  const [owner, repo] = base.pathSegments;
+  const [owner, repo, third] = base.pathSegments;
+  const lowerOwner = owner?.toLowerCase();
+
+  if ((lowerOwner === "orgs" || lowerOwner === "users") && repo && !third) {
+    return {
+      ...base,
+      objectKind: "profile",
+      route: "public_artifact_enricher",
+      stableId: repo,
+      handle: repo,
+      identityGate: handleOnlyGate("GitHub", repo),
+      provenance: urlSignal("github_handle", repo),
+      notes: [`Normalized GitHub ${lowerOwner === "orgs" ? "organization" : "user"} route to a handle-only profile.`]
+    };
+  }
+
+  if (!owner || GITHUB_RESERVED_ROOTS.has(lowerOwner ?? "") || lowerOwner === "orgs" || lowerOwner === "users") {
+    return {
+      ...base,
+      objectKind: owner ? "directory" : "unknown",
+      route: "unsupported",
+      identityGate: handleOnlyGate("GitHub"),
+      notes: owner
+        ? [`GitHub reserved route "${owner}" is not treated as a person, organization, or repository artifact.`]
+        : ["GitHub URL has no user, organization, or repository path."]
+    };
+  }
 
   if (owner && repo) {
     const stableId = `${owner}/${repo}`;
@@ -293,24 +342,14 @@ function classifyGitHub(rawUrl: string, url: URL): ProfileUrlIntake {
     };
   }
 
-  if (owner) {
-    return {
-      ...base,
-      objectKind: "profile",
-      route: "public_artifact_enricher",
-      stableId: owner,
-      handle: owner,
-      identityGate: handleOnlyGate("GitHub", owner),
-      provenance: urlSignal("github_handle", owner)
-    };
-  }
-
   return {
     ...base,
-    objectKind: "unknown",
-    route: "unsupported",
-    identityGate: handleOnlyGate("GitHub"),
-    notes: ["GitHub URL has no user, organization, or repository path."]
+    objectKind: "profile",
+    route: "public_artifact_enricher",
+    stableId: owner,
+    handle: owner,
+    identityGate: handleOnlyGate("GitHub", owner),
+    provenance: urlSignal("github_handle", owner)
   };
 }
 
