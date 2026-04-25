@@ -1,5 +1,6 @@
 import express from "express";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { getConfig } from "./config.js";
 import { enrichProfile } from "./pipeline/enrichProfile.js";
@@ -14,6 +15,9 @@ import { classifyProfileUrl } from "./utils/profileIntake.js";
 
 export const app = express();
 const config = getConfig();
+const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+const appRoot = path.resolve(moduleDirectory, "..");
+export const publicIndexPath = path.join(appRoot, "public", "index.html");
 
 const inspectSchema = z.object({
   url: z.string().min(1).optional(),
@@ -51,7 +55,7 @@ const intakeSchema = z.object({
 app.use(express.json());
 
 app.get("/", (_request, response) => {
-  response.sendFile(path.join(process.cwd(), "public", "index.html"));
+  response.sendFile(publicIndexPath);
 });
 
 app.get("/health", (_request, response) => {
