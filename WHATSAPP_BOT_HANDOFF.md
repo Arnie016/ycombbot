@@ -39,11 +39,15 @@ Use this for the WhatsApp bot.
 ```text
 POST /profile/text
 POST /profile/full
+POST /intake/classify
+POST /intake/enrich
 GET /health
 ```
 
 - `/profile/text` is plain text
 - `/profile/full` is debug only
+- `/intake/classify` classifies any supported profile or artifact URL without fetching
+- `/intake/enrich` returns safe public-artifact evidence cards for non-LinkedIn links
 
 ## Single Profile Request
 
@@ -248,6 +252,31 @@ For maximum authenticity:
   "strictIdentity": true
 }
 ```
+
+## Non-LinkedIn Link Intake
+
+When a user sends GitHub, Devpost, Hugging Face, X/Twitter, a resume, a blog, or a personal site, call:
+
+```text
+POST /intake/enrich
+```
+
+Example:
+
+```bash
+curl -s -X POST http://localhost:3001/intake/enrich \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://github.com/openai/openai-node"
+  }'
+```
+
+Important:
+
+- artifact cards are URL-derived evidence only
+- `canInferPersonIdentity` stays `false`
+- use the card as a matching or profile-quality input only after corroboration
+- if no card is returned, fall back to asking for a LinkedIn, resume, or another trusted profile link
 
 ## Current Local Run
 

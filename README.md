@@ -46,6 +46,8 @@ Returns a basic health payload.
   Debug payload with raw discovery and structured evidence.
 - `POST /intake/classify`
   Universal URL classification for LinkedIn, GitHub, Devpost, Hugging Face, X/Twitter, blogs, resumes, and personal sites.
+- `POST /intake/enrich`
+  Deterministic public-artifact evidence cards for GitHub, Devpost, Hugging Face, and X/Twitter links. These cards are safe matching inputs, not person identity.
 
 ### `POST /intake/classify`
 
@@ -96,6 +98,61 @@ Strict identity rule:
 - URL handles and slugs are routing keys only.
 - Do not infer a person, role, school, company, or project ownership from a weak handle alone.
 - Public artifacts can support evidence after corroboration, but they are not identity by themselves.
+
+### `POST /intake/enrich`
+
+This endpoint builds on `/intake/classify`. It returns deterministic, URL-derived artifact cards that can later feed profile quality, event matching, and intro suggestions without pretending that a handle or repo owner is a person.
+
+Request:
+
+```json
+{
+  "urls": [
+    "https://github.com/example/example-repo",
+    "https://devpost.com/software/example-project",
+    "https://huggingface.co/spaces/example/demo"
+  ]
+}
+```
+
+Response excerpt:
+
+```json
+{
+  "enrichments": [
+    {
+      "normalizedUrl": "https://github.com/example/example-repo",
+      "route": "public_artifact_enricher",
+      "card": {
+        "provider": "github",
+        "objectKind": "repository",
+        "stableId": "example/example-repo",
+        "title": "example/example-repo",
+        "subtitle": "GitHub repository",
+        "canSupportPersonProfile": true,
+        "canInferPersonIdentity": false,
+        "evidence": [
+          {
+            "field": "github_owner",
+            "value": "example",
+            "source": "url",
+            "confidence": "high"
+          }
+        ],
+        "matchSeeds": [
+          {
+            "kind": "provider",
+            "value": "github",
+            "confidence": "high"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Use this before people matching when the user drops a non-LinkedIn public artifact. It is intentionally conservative: artifact evidence can improve a profile after corroboration, but it never establishes a person by itself.
 
 ### `POST /profile`
 

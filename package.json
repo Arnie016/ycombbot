@@ -9,6 +9,8 @@
     "check": "tsc --noEmit -p tsconfig.json",
     "assert:profile-intake": "npm run build && node scripts/assert_profile_intake.mjs",
     "assert:profile-intake-endpoint": "npm run build && node scripts/assert_profile_intake_endpoint.mjs",
+    "assert:public-artifact": "npm run build && node scripts/assert_public_artifact_enrichment.mjs",
+    "assert:public-artifact-endpoint": "npm run build && node scripts/assert_public_artifact_endpoint.mjs",
     "assert:static-root": "npm run build && node scripts/assert_static_root.mjs",
     "assert:strict-identity": "npm run build && node scripts/assert_strict_identity.mjs",
     "start": "node dist/index.js"

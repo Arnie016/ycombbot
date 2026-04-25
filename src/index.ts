@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { getConfig } from "./config.js";
 import { enrichProfile } from "./pipeline/enrichProfile.js";
+import { enrichPublicArtifact } from "./pipeline/enrichPublicArtifact.js";
 import { deriveInsights } from "./insights/deriveInsights.js";
 import { buildBotProfile, buildBotText, buildPresentation, type ProfileBuildOptions } from "./presentation/buildPresentation.js";
 import { discoverPublicProfileEvidence } from "./providers/exa.js";
@@ -102,6 +103,47 @@ export function classifyIntakeInternal(requestBody: unknown) {
 
 app.post("/intake/classify", (request, response) => {
   const result = classifyIntakeInternal(request.body);
+
+  response.status(result.status).json(result.body);
+});
+
+export function enrichIntakeInternal(requestBody: unknown) {
+  const parsed = intakeSchema.safeParse(requestBody);
+
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: "Invalid request body.",
+        details: parsed.error.flatten()
+      }
+    };
+  }
+
+  try {
+    const urls = parsed.data.urls?.length ? parsed.data.urls : [parsed.data.url!];
+    const enrichments = urls.map((urlInput) => enrichPublicArtifact(urlInput));
+
+    return {
+      ok: true as const,
+      status: 200,
+      body: urls.length === 1 ? { enrichment: enrichments[0] } : { enrichments }
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown intake enrichment error.";
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: message
+      }
+    };
+  }
+}
+
+app.post("/intake/enrich", (request, response) => {
+  const result = enrichIntakeInternal(request.body);
 
   response.status(result.status).json(result.body);
 });
