@@ -51,6 +51,16 @@ assertCard("https://huggingface.co/spaces/openai/whisper", {
   slug: "whisper"
 });
 
+const huggingFaceDocs = enrichPublicArtifact("https://huggingface.co/docs/transformers/index");
+assert.equal(huggingFaceDocs.route, "unsupported");
+assert.equal(huggingFaceDocs.card, undefined);
+assert.match(huggingFaceDocs.notes.join(" "), /reserved route|No public artifact card/);
+
+const huggingFacePricing = enrichPublicArtifact("https://huggingface.co/pricing");
+assert.equal(huggingFacePricing.route, "unsupported");
+assert.equal(huggingFacePricing.card, undefined);
+assert.match(huggingFacePricing.notes.join(" "), /reserved route|No public artifact card/);
+
 const website = enrichPublicArtifact("https://example.com/about?utm_source=hn");
 assert.equal(website.route, "website_metadata_probe");
 assert.equal(website.card, undefined);

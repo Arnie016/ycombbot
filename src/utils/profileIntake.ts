@@ -124,6 +124,26 @@ const X_RESERVED_ROOTS = new Set([
   "settings",
   "share"
 ]);
+const HUGGINGFACE_RESERVED_ROOTS = new Set([
+  "blog",
+  "brand",
+  "chat",
+  "collections",
+  "datasets",
+  "docs",
+  "enterprise",
+  "join",
+  "learn",
+  "login",
+  "models",
+  "new",
+  "organizations",
+  "papers",
+  "pricing",
+  "settings",
+  "spaces",
+  "tasks"
+]);
 
 function parseUrl(rawUrl: string): URL {
   let candidate = rawUrl.trim();
@@ -405,6 +425,7 @@ function classifyDevpost(rawUrl: string, url: URL): ProfileUrlIntake {
 function classifyHuggingFace(rawUrl: string, url: URL): ProfileUrlIntake {
   const base = baseResult(rawUrl, url, "huggingface");
   const [first, second, third] = base.pathSegments;
+  const lowerFirst = first?.toLowerCase();
 
   if ((first === "spaces" || first === "datasets") && second && third) {
     const stableId = `${second}/${third}`;
@@ -420,6 +441,18 @@ function classifyHuggingFace(rawUrl: string, url: URL): ProfileUrlIntake {
         ...urlSignal("huggingface_owner", second),
         ...urlSignal(`huggingface_${first === "spaces" ? "space" : "dataset"}`, third)
       ]
+    };
+  }
+
+  if (!first || HUGGINGFACE_RESERVED_ROOTS.has(lowerFirst ?? "")) {
+    return {
+      ...base,
+      objectKind: first ? "directory" : "unknown",
+      route: "unsupported",
+      identityGate: handleOnlyGate("Hugging Face"),
+      notes: first
+        ? [`Hugging Face reserved route "${first}" is not treated as a person, organization, model, Space, or dataset artifact.`]
+        : ["Hugging Face URL has no profile, model, Space, or dataset path."]
     };
   }
 

@@ -78,6 +78,20 @@ assertIntake("https://huggingface.co/spaces/openai/whisper", {
   slug: "whisper"
 });
 
+const huggingFaceDocs = assertIntake("https://huggingface.co/docs/transformers/index", {
+  provider: "huggingface",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(huggingFaceDocs.stableId, undefined);
+
+const huggingFacePricing = assertIntake("https://huggingface.co/pricing", {
+  provider: "huggingface",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(huggingFacePricing.stableId, undefined);
+
 assertIntake("https://x.com/sama/status/123456789", {
   provider: "x",
   objectKind: "post",
