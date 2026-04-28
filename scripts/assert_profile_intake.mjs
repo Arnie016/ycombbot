@@ -86,6 +86,20 @@ assertIntake("https://x.com/sama/status/123456789", {
   handle: "sama"
 });
 
+const xSearch = assertIntake("https://x.com/search?q=founder", {
+  provider: "x",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(xSearch.stableId, undefined);
+
+const xInternal = assertIntake("https://twitter.com/i/bookmarks", {
+  provider: "x",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(xInternal.stableId, undefined);
+
 assertIntake("https://example.com/resume.pdf?utm_campaign=demo", {
   provider: "resume",
   objectKind: "resume_file",

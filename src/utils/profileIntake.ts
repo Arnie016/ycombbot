@@ -111,6 +111,19 @@ const GITHUB_RESERVED_ROOTS = new Set([
   "topics",
   "trending"
 ]);
+const X_RESERVED_ROOTS = new Set([
+  "compose",
+  "explore",
+  "hashtag",
+  "home",
+  "i",
+  "intent",
+  "messages",
+  "notifications",
+  "search",
+  "settings",
+  "share"
+]);
 
 function parseUrl(rawUrl: string): URL {
   let candidate = rawUrl.trim();
@@ -450,6 +463,19 @@ function classifyHuggingFace(rawUrl: string, url: URL): ProfileUrlIntake {
 function classifyX(rawUrl: string, url: URL): ProfileUrlIntake {
   const base = baseResult(rawUrl, url, "x");
   const [handle, second, third] = base.pathSegments;
+  const lowerHandle = handle?.toLowerCase();
+
+  if (!handle || X_RESERVED_ROOTS.has(lowerHandle ?? "")) {
+    return {
+      ...base,
+      objectKind: handle ? "directory" : "unknown",
+      route: "unsupported",
+      identityGate: handleOnlyGate("X/Twitter"),
+      notes: handle
+        ? [`X/Twitter reserved route "${handle}" is not treated as a person profile or public post artifact.`]
+        : ["X/Twitter URL has no profile handle or post path."]
+    };
+  }
 
   if (handle && second === "status" && third) {
     return {

@@ -66,4 +66,14 @@ assert.equal(githubOrgSubpage.route, "unsupported");
 assert.equal(githubOrgSubpage.card, undefined);
 assert.match(githubOrgSubpage.notes.join(" "), /reserved route|No public artifact card/);
 
+const xSearch = enrichPublicArtifact("https://x.com/search?q=founder");
+assert.equal(xSearch.route, "unsupported");
+assert.equal(xSearch.card, undefined);
+assert.match(xSearch.notes.join(" "), /reserved route|No public artifact card/);
+
+const xInternal = enrichPublicArtifact("https://twitter.com/i/bookmarks");
+assert.equal(xInternal.route, "unsupported");
+assert.equal(xInternal.card, undefined);
+assert.match(xInternal.notes.join(" "), /reserved route|No public artifact card/);
+
 console.log("public artifact enrichment assertions passed");
