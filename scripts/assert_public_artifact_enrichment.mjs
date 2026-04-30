@@ -42,6 +42,21 @@ assertCard("https://devpost.com/software/pacman-ai", {
   slug: "pacman-ai"
 });
 
+const devpostSoftwareIndex = enrichPublicArtifact("https://devpost.com/software");
+assert.equal(devpostSoftwareIndex.route, "unsupported");
+assert.equal(devpostSoftwareIndex.card, undefined);
+assert.match(devpostSoftwareIndex.notes.join(" "), /reserved route|No public artifact card/);
+
+const devpostHackathons = enrichPublicArtifact("https://devpost.com/hackathons");
+assert.equal(devpostHackathons.route, "unsupported");
+assert.equal(devpostHackathons.card, undefined);
+assert.match(devpostHackathons.notes.join(" "), /reserved route|No public artifact card/);
+
+const devpostLogin = enrichPublicArtifact("https://devpost.com/login");
+assert.equal(devpostLogin.route, "unsupported");
+assert.equal(devpostLogin.card, undefined);
+assert.match(devpostLogin.notes.join(" "), /reserved route|No public artifact card/);
+
 assertCard("https://huggingface.co/spaces/openai/whisper", {
   provider: "huggingface",
   objectKind: "space",

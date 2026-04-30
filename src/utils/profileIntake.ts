@@ -144,6 +144,25 @@ const HUGGINGFACE_RESERVED_ROOTS = new Set([
   "spaces",
   "tasks"
 ]);
+const DEVPOST_RESERVED_ROOTS = new Set([
+  "about",
+  "accounts",
+  "api",
+  "auth",
+  "business",
+  "challenges",
+  "companies",
+  "dashboard",
+  "help",
+  "hackathons",
+  "jobs",
+  "login",
+  "portfolio",
+  "privacy",
+  "settings",
+  "software",
+  "terms"
+]);
 
 function parseUrl(rawUrl: string): URL {
   let candidate = rawUrl.trim();
@@ -389,8 +408,9 @@ function classifyGitHub(rawUrl: string, url: URL): ProfileUrlIntake {
 function classifyDevpost(rawUrl: string, url: URL): ProfileUrlIntake {
   const base = baseResult(rawUrl, url, "devpost");
   const [first, second] = base.pathSegments;
+  const lowerFirst = first?.toLowerCase();
 
-  if (first?.toLowerCase() === "software" && second) {
+  if (lowerFirst === "software" && second) {
     return {
       ...base,
       objectKind: "project",
@@ -399,6 +419,18 @@ function classifyDevpost(rawUrl: string, url: URL): ProfileUrlIntake {
       slug: second,
       identityGate: artifactGate("Devpost project"),
       provenance: urlSignal("devpost_project_slug", second)
+    };
+  }
+
+  if (!first || DEVPOST_RESERVED_ROOTS.has(lowerFirst ?? "")) {
+    return {
+      ...base,
+      objectKind: first ? "directory" : "unknown",
+      route: "unsupported",
+      identityGate: handleOnlyGate("Devpost"),
+      notes: first
+        ? [`Devpost reserved route "${first}" is not treated as a person profile or project artifact.`]
+        : ["Devpost URL has no profile handle or project path."]
     };
   }
 

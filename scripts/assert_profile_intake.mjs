@@ -69,6 +69,27 @@ assertIntake("https://devpost.com/software/pacman-ai", {
   stableId: "pacman-ai"
 });
 
+const devpostSoftwareIndex = assertIntake("https://devpost.com/software", {
+  provider: "devpost",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(devpostSoftwareIndex.stableId, undefined);
+
+const devpostHackathons = assertIntake("https://devpost.com/hackathons", {
+  provider: "devpost",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(devpostHackathons.stableId, undefined);
+
+const devpostLogin = assertIntake("https://devpost.com/login", {
+  provider: "devpost",
+  objectKind: "directory",
+  route: "unsupported"
+});
+assert.equal(devpostLogin.stableId, undefined);
+
 assertIntake("https://huggingface.co/spaces/openai/whisper", {
   provider: "huggingface",
   objectKind: "space",
