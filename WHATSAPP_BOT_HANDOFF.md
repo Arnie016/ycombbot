@@ -41,6 +41,8 @@ POST /profile/text
 POST /profile/full
 POST /intake/classify
 POST /intake/enrich
+POST /telegram/repo-share/prepare
+POST /telegram/repo-share/match
 GET /health
 ```
 
@@ -48,6 +50,8 @@ GET /health
 - `/profile/full` is debug only
 - `/intake/classify` classifies any supported profile or artifact URL without fetching
 - `/intake/enrich` returns safe public-artifact evidence cards for non-LinkedIn links
+- `/telegram/repo-share/prepare` formats repo/build links for Telegram collaboration posts
+- `/telegram/repo-share/match` scores opted-in repo/build cards for collaborator discovery
 
 ## Single Profile Request
 
@@ -277,6 +281,45 @@ Important:
 - `canInferPersonIdentity` stays `false`
 - use the card as a matching or profile-quality input only after corroboration
 - if no card is returned, fall back to asking for a LinkedIn, resume, or another trusted profile link
+
+## Telegram Repo Collaboration
+
+For a Telegram group where people share what they are building, use:
+
+```text
+POST /telegram/repo-share/prepare
+```
+
+Example:
+
+```bash
+curl -s -X POST http://localhost:3001/telegram/repo-share/prepare \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://github.com/openai/openai-node",
+    "projectPitch": "SDK experiments for AI app builders at NUS.",
+    "lookingFor": "People building TypeScript agents or Telegram bots.",
+    "tags": ["ai", "typescript", "telegram"],
+    "intents": ["feedback", "contributors"],
+    "eventContext": "NUS Ask group"
+  }'
+```
+
+The response includes:
+
+- `shareText` for the Telegram message
+- inline actions: `I can help`, `Want intro`, `Save repo`, `Find similar`
+- consensus prompts for group reactions
+- match seeds for private collaborator recommendations
+- strict identity safety: repo owners and handles are not treated as people
+
+To recommend similar builders, call:
+
+```text
+POST /telegram/repo-share/match
+```
+
+Pass the current repo card plus opted-in candidate cards. Return the top matches privately; the group should only see aggregate interest signals unless both sides opt in.
 
 ## Current Local Run
 

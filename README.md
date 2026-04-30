@@ -48,6 +48,10 @@ Returns a basic health payload.
   Universal URL classification for LinkedIn, GitHub, Devpost, Hugging Face, X/Twitter, blogs, resumes, and personal sites.
 - `POST /intake/enrich`
   Deterministic public-artifact evidence cards for GitHub, Devpost, Hugging Face, and X/Twitter links. These cards are safe matching inputs, not person identity.
+- `POST /telegram/repo-share/prepare`
+  Telegram-ready repo/build collaboration card with share text, inline actions, consensus prompts, and identity-safety notes.
+- `POST /telegram/repo-share/match`
+  Deterministic scoring for opt-in repo/build cards so the bot can recommend collaborators and similar builders.
 
 ### `POST /intake/classify`
 
@@ -153,6 +157,53 @@ Response excerpt:
 ```
 
 Use this before people matching when the user drops a non-LinkedIn public artifact. It is intentionally conservative: artifact evidence can improve a profile after corroboration, but it never establishes a person by itself.
+
+### Telegram repo collaboration
+
+These endpoints support an opt-in Telegram group flow where people share repos, Devpost projects, Hugging Face artifacts, or build posts and privately find collaborators.
+
+Prepare a card:
+
+```json
+{
+  "url": "https://github.com/example/example-repo",
+  "projectPitch": "A Telegram bot for matching NUS builders by what they are making.",
+  "lookingFor": "People who can test the bot or contribute TypeScript code.",
+  "tags": ["telegram", "ai", "nus"],
+  "intents": ["feedback", "contributors"],
+  "eventContext": "NUS Ask group"
+}
+```
+
+`POST /telegram/repo-share/prepare` returns:
+- `shareText` for the Telegram message
+- `inlineActions` such as `I can help`, `Want intro`, `Save repo`, and `Find similar`
+- `consensusPrompts` the bot can use to gather group signal
+- `matchSeeds` for future collaborator recommendations
+- `identitySafety.canInferPersonIdentity: false`
+
+Score matches:
+
+```json
+{
+  "source": {
+    "url": "https://github.com/example/example-repo",
+    "tags": ["telegram", "ai", "typescript"],
+    "intents": ["feedback", "contributors"]
+  },
+  "candidates": [
+    {
+      "shareId": "repo_candidate",
+      "title": "nus-builder-map",
+      "primaryUrl": "https://github.com/example/nus-builder-map",
+      "tags": ["telegram", "ai"],
+      "intents": ["users", "design_partner"]
+    }
+  ]
+}
+```
+
+`POST /telegram/repo-share/match` returns scored candidates, reasons, and a low-pressure intro suggestion. Keep public group interactions as consensus signals; send actual introductions privately only after users opt in.
 
 ### `POST /profile`
 

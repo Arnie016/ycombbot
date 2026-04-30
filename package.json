@@ -12,6 +12,8 @@
     "assert:public-artifact": "npm run build && node scripts/assert_public_artifact_enrichment.mjs",
     "assert:public-artifact-endpoint": "npm run build && node scripts/assert_public_artifact_endpoint.mjs",
     "assert:exa-identity-anchor": "npm run build && node scripts/assert_exa_identity_anchor.mjs",
+    "assert:telegram-repo-collab": "npm run build && node scripts/assert_telegram_repo_collab.mjs",
+    "assert:telegram-repo-collab-endpoint": "npm run build && node scripts/assert_telegram_repo_collab_endpoint.mjs",
     "assert:static-root": "npm run build && node scripts/assert_static_root.mjs",
     "assert:strict-identity": "npm run build && node scripts/assert_strict_identity.mjs",
     "start": "node dist/index.js"

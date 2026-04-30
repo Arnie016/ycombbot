@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getConfig } from "./config.js";
 import { enrichProfile } from "./pipeline/enrichProfile.js";
 import { enrichPublicArtifact } from "./pipeline/enrichPublicArtifact.js";
+import { prepareTelegramRepoShare, scoreTelegramRepoMatch } from "./pipeline/telegramRepoCollab.js";
 import { deriveInsights } from "./insights/deriveInsights.js";
 import { buildBotProfile, buildBotText, buildPresentation, type ProfileBuildOptions } from "./presentation/buildPresentation.js";
 import { discoverPublicProfileEvidence } from "./providers/exa.js";
@@ -51,6 +52,59 @@ const intakeSchema = z.object({
       message: "Provide either url or urls."
     });
   }
+});
+
+const collaborationIntentSchema = z.enum([
+  "feedback",
+  "contributors",
+  "cofounder",
+  "users",
+  "design_partner",
+  "hiring",
+  "internship",
+  "study_group",
+  "showcase"
+]);
+
+const telegramRepoShareSchema = z.object({
+  url: z.string().min(1),
+  telegram: z.object({
+    groupId: z.string().min(1).optional(),
+    messageId: z.string().min(1).optional(),
+    userId: z.string().min(1).optional(),
+    username: z.string().min(1).optional()
+  }).optional(),
+  projectPitch: z.string().trim().min(1).max(500).optional(),
+  lookingFor: z.string().trim().min(1).max(300).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
+  intents: z.array(collaborationIntentSchema).max(8).optional(),
+  eventContext: z.string().trim().min(1).max(120).optional()
+});
+
+const matchSeedSchema = z.object({
+  kind: z.string().min(1),
+  value: z.string().min(1),
+  confidence: z.enum(["high", "medium", "low"])
+});
+
+const telegramRepoMatchSchema = z.object({
+  source: z.object({
+    url: z.string().min(1),
+    projectPitch: z.string().trim().min(1).max(500).optional(),
+    lookingFor: z.string().trim().min(1).max(300).optional(),
+    tags: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
+    intents: z.array(collaborationIntentSchema).max(8).optional(),
+    eventContext: z.string().trim().min(1).max(120).optional()
+  }),
+  candidates: z.array(z.object({
+    shareId: z.string().min(1),
+    title: z.string().min(1),
+    primaryUrl: z.string().min(1),
+    tags: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
+    intents: z.array(collaborationIntentSchema).max(8).optional(),
+    matchSeeds: z.array(matchSeedSchema).max(16).optional(),
+    lookingFor: z.string().trim().min(1).max(300).optional()
+  })).max(20)
 });
 
 app.use(express.json());
@@ -144,6 +198,90 @@ export function enrichIntakeInternal(requestBody: unknown) {
 
 app.post("/intake/enrich", (request, response) => {
   const result = enrichIntakeInternal(request.body);
+
+  response.status(result.status).json(result.body);
+});
+
+export function prepareTelegramRepoShareInternal(requestBody: unknown) {
+  const parsed = telegramRepoShareSchema.safeParse(requestBody);
+
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: "Invalid request body.",
+        details: parsed.error.flatten()
+      }
+    };
+  }
+
+  try {
+    return {
+      ok: true as const,
+      status: 200,
+      body: prepareTelegramRepoShare(parsed.data)
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown Telegram repo share error.";
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: message
+      }
+    };
+  }
+}
+
+app.post("/telegram/repo-share/prepare", (request, response) => {
+  const result = prepareTelegramRepoShareInternal(request.body);
+
+  response.status(result.status).json(result.body);
+});
+
+export function matchTelegramRepoSharesInternal(requestBody: unknown) {
+  const parsed = telegramRepoMatchSchema.safeParse(requestBody);
+
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: "Invalid request body.",
+        details: parsed.error.flatten()
+      }
+    };
+  }
+
+  try {
+    const source = prepareTelegramRepoShare(parsed.data.source).card;
+    const matches = parsed.data.candidates
+      .map((candidate) => scoreTelegramRepoMatch(source, candidate))
+      .sort((left, right) => right.score - left.score);
+
+    return {
+      ok: true as const,
+      status: 200,
+      body: {
+        source,
+        matches
+      }
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown Telegram repo match error.";
+    return {
+      ok: false as const,
+      status: 400,
+      body: {
+        error: message
+      }
+    };
+  }
+}
+
+app.post("/telegram/repo-share/match", (request, response) => {
+  const result = matchTelegramRepoSharesInternal(request.body);
 
   response.status(result.status).json(result.body);
 });
