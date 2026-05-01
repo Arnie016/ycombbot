@@ -55,10 +55,27 @@ for (const slug of ["ojasx", "arnav-salkade-27076a201", "yangshun"]) {
   assertSparseFallback(slug);
 }
 
+const localizedNotFoundProfile = buildBotProfile(makePayload("ojasx", {
+  name: "لم يتم العثور على الصفحة"
+}), undefined, undefined, { strictIdentity: true });
+assert.equal(localizedNotFoundProfile.name, "Unknown profile");
+assert.equal(localizedNotFoundProfile.confidence?.identity, "low");
+assert.equal(localizedNotFoundProfile.workOrStudy, undefined);
+assert.equal(localizedNotFoundProfile.currentRole, undefined);
+assert.equal(localizedNotFoundProfile.organization, undefined);
+
 const noNameQueries = buildDiscoveryQueries(makePayload("arnav-salkade-27076a201").entity);
 assert.deepEqual(noNameQueries, [
   "\"arnav-salkade-27076a201\"",
   "\"https://www.linkedin.com/in/arnav-salkade-27076a201/\""
+]);
+
+const localizedNotFoundQueries = buildDiscoveryQueries(makePayload("ojasx", {
+  name: "لم يتم العثور على الصفحة"
+}).entity);
+assert.deepEqual(localizedNotFoundQueries, [
+  "\"ojasx\"",
+  "\"https://www.linkedin.com/in/ojasx/\""
 ]);
 
 const namedEntity = makePayload("yangshun", {

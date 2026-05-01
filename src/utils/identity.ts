@@ -23,6 +23,17 @@ const HANDLE_TOKENS = new Set([
   "x"
 ]);
 
+const INVALID_LINKEDIN_NAME_PATTERNS = [
+  /^sign up$/i,
+  /^join linkedin$/i,
+  /^linkedin$/i,
+  /^page not found$/i,
+  /^profile not found$/i,
+  /this page (does not|doesn't) exist/i,
+  /could not find this profile/i,
+  /لم يتم العثور على الصفحة/i
+];
+
 function titleCaseToken(token: string): string {
   if (!token) {
     return token;
@@ -72,8 +83,18 @@ export function guessNameFromLinkedInUrl(url: string): string | undefined {
   return nameTokens.map(titleCaseToken).join(" ");
 }
 
+export function isUsableLinkedInPersonName(value: string | undefined): value is string {
+  const name = value?.replace(/\s+/g, " ").trim();
+
+  if (!name) {
+    return false;
+  }
+
+  return !INVALID_LINKEDIN_NAME_PATTERNS.some((pattern) => pattern.test(name));
+}
+
 export function buildDiscoveryQueries(entity: RawLinkedInEntity): string[] {
-  const name = entity.name;
+  const name = isUsableLinkedInPersonName(entity.name) ? entity.name : undefined;
   const queries = new Set<string>();
   const currentCompany = entity.currentCompany?.trim();
   const slug = extractLinkedInSlug(entity.url);

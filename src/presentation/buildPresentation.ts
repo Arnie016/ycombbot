@@ -11,7 +11,7 @@ import type {
   ScrapeResponse,
   StructuredProfile
 } from "../types.js";
-import { extractLinkedInSlug, guessNameFromLinkedInUrl } from "../utils/identity.js";
+import { extractLinkedInSlug, guessNameFromLinkedInUrl, isUsableLinkedInPersonName } from "../utils/identity.js";
 
 export interface ProfileBuildOptions {
   researchMode?: "strict" | "balanced" | "exploratory";
@@ -462,7 +462,7 @@ function inferWorkOrStudy(entity: RawLinkedInEntity, discovery?: DiscoveryResult
 }
 
 function displayName(entity: RawLinkedInEntity, discovery?: DiscoveryResult, options?: ProfileBuildOptions): string {
-  if (entity.name && !/^(sign up|join linkedin|linkedin)$/i.test(entity.name.trim())) {
+  if (isUsableLinkedInPersonName(entity.name)) {
     return entity.name;
   }
 
@@ -589,9 +589,10 @@ function buildConfidence(
   whatTheyDoValue: string | undefined,
   options?: ProfileBuildOptions
 ): BotConfidence {
-  const identity = options?.strictIdentity && !entity.name
+  const hasUsableName = isUsableLinkedInPersonName(entity.name);
+  const identity = options?.strictIdentity && !hasUsableName
     ? "low"
-    : entity.name
+    : hasUsableName
     ? "high"
     : entity.access.isAuthwall
       ? "low"

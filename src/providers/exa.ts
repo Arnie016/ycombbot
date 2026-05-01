@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 import type { DiscoveryDocument, DiscoveryResult, RawLinkedInEntity } from "../types.js";
-import { buildDiscoveryQueries } from "../utils/identity.js";
+import { buildDiscoveryQueries, isUsableLinkedInPersonName } from "../utils/identity.js";
 
 interface ExaSearchResponse {
   results?: Array<{
@@ -308,8 +308,8 @@ export async function discoverPublicProfileEvidence(entity: RawLinkedInEntity): 
   }
 
   const queryHints = buildDiscoveryQueries(entity);
-  const anchorName = entity.name;
-  const exactSlug = entity.name ? undefined : entity.stableId;
+  const anchorName = isUsableLinkedInPersonName(entity.name) ? entity.name : undefined;
+  const exactSlug = anchorName ? undefined : entity.stableId;
   const documents = new Map<string, DiscoveryDocument>();
   const notes: string[] = [];
 

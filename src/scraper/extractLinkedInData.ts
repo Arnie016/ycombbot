@@ -1,6 +1,7 @@
 import { load, type CheerioAPI } from "cheerio";
 import type { FetchedLinkedInPage } from "./fetchLinkedInPage.js";
 import type { RawLinkedInEntity } from "../types.js";
+import { isUsableLinkedInPersonName } from "../utils/identity.js";
 import { describeLinkedInUrl, detectLinkedInEntityType, normalizeWhitespace, pickFirst } from "../utils/linkedin.js";
 
 interface ExtractLinkedInDataInput {
@@ -197,6 +198,7 @@ export function extractLinkedInData(input: ExtractLinkedInDataInput): RawLinkedI
       textAt($, ["h1", ".top-card-layout__title", ".top-card__title"]),
       title?.split("|")[0]
     ), input.fetchedPage.isAuthwall);
+    const usableName = isUsableLinkedInPersonName(name) ? name : undefined;
     const headline = cleanAuthwallText(pickFirst(
       textAt($, [
         ".top-card-layout__headline",
@@ -227,7 +229,7 @@ export function extractLinkedInData(input: ExtractLinkedInDataInput): RawLinkedI
         : undefined
     );
 
-    sourceSignals.push(...[name, headline, about, currentCompany].filter(Boolean) as string[]);
+    sourceSignals.push(...[usableName, headline, about, currentCompany].filter(Boolean) as string[]);
 
     return {
       kind: descriptor.kind,
@@ -244,7 +246,7 @@ export function extractLinkedInData(input: ExtractLinkedInDataInput): RawLinkedI
         isBlocked: input.fetchedPage.isBlocked,
         expandedActions: input.fetchedPage.expandedActions
       },
-      name,
+      name: usableName,
       headline,
       about,
       location,

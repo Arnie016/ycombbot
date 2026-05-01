@@ -51,6 +51,13 @@ try {
     "no-name LinkedIn profiles must not use guessed slug-derived names as Exa includeText anchors"
   );
 
+  const localizedNotFoundBodies = await captureRequestBodies(makeEntity("ojasx", { name: "لم يتم العثور على الصفحة" }));
+  assert.ok(localizedNotFoundBodies.length > 0, "expected Exa search requests for localized not-found entity");
+  assert.ok(
+    localizedNotFoundBodies.every((body) => body.includeText === undefined),
+    "localized LinkedIn not-found text must not become an Exa includeText anchor"
+  );
+
   const namedBodies = await captureRequestBodies(makeEntity("yangshun", { name: "Yangshun Tay" }));
   assert.ok(namedBodies.length > 0, "expected Exa search requests for named entity");
   assert.ok(
