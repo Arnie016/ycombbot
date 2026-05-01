@@ -315,6 +315,32 @@ function fallbackProjects(entity: RawLinkedInEntity): BotProject[] {
   return projects;
 }
 
+function projectKey(project: BotProject): string {
+  if (project.sourceUrl) {
+    return project.sourceUrl.toLowerCase().replace(/\/+$/, "");
+  }
+
+  return cleanProjectName(project.name).toLowerCase();
+}
+
+function uniqueProjects(projects: BotProject[]): BotProject[] {
+  const seen = new Set<string>();
+  const unique: BotProject[] = [];
+
+  for (const project of projects) {
+    const key = projectKey(project);
+
+    if (!key || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push(project);
+  }
+
+  return unique;
+}
+
 function profileVisibleProjects(entity: RawLinkedInEntity): BotProject[] {
   const text = [entity.metaDescription, entity.about, entity.headline, ...entity.sourceSignals]
     .filter(Boolean)
@@ -711,13 +737,12 @@ export function buildBotProfile(
         sourceUrl: project.sourceUrls[0]
       })) ?? [];
   const visibleProjects = profileVisibleProjects(payload.entity);
-  const projects = dedupe([
+  const projects = uniqueProjects([
     ...structuredProjects,
     ...visibleProjects,
     ...discoveryProjects,
     ...fallbackProjects(payload.entity)
-  ].map((project) => JSON.stringify(project)))
-    .map((project) => JSON.parse(project) as BotProject)
+  ])
     .slice(0, maxProjects);
 
   const workOrStudy = inferWorkOrStudy(payload.entity, discovery);

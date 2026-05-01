@@ -64,6 +64,29 @@ assert.equal(localizedNotFoundProfile.workOrStudy, undefined);
 assert.equal(localizedNotFoundProfile.currentRole, undefined);
 assert.equal(localizedNotFoundProfile.organization, undefined);
 
+const duplicateProjectProfile = buildBotProfile(makePayload("ojasx", {
+  name: "لم يتم العثور على الصفحة"
+}), {
+  provider: "exa",
+  queryHints: [],
+  notes: [],
+  documents: [
+    {
+      title: "manishjhacse/ojasx",
+      url: "https://github.com/manishjhacse/ojasx",
+      excerpt: "Public repository showing shipped technical work.",
+      sourceType: "exa"
+    },
+    {
+      title: "OjasX",
+      url: "https://github.com/manishjhacse/ojasx",
+      excerpt: "Another copy of the same repository result.",
+      sourceType: "exa"
+    }
+  ]
+}, undefined, { strictIdentity: true });
+assert.equal(duplicateProjectProfile.impressiveProjects.length, 1);
+
 const noNameQueries = buildDiscoveryQueries(makePayload("arnav-salkade-27076a201").entity);
 assert.deepEqual(noNameQueries, [
   "\"arnav-salkade-27076a201\"",
